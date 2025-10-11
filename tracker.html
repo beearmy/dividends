@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dividend Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 min-h-screen">
+    <!-- Hamburger Menu -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-white text-xl font-bold">💷 Dividend Tracker</span>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="toggleMenu()" class="text-slate-300 hover:text-white p-2">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dropdown Menu -->
+    <div id="menu" class="hidden fixed top-16 right-4 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-40 min-w-[200px]">
+        <div class="py-2">
+            <a href="index.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                Home
+            </a>
+            <a href="tracker.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                My Tracker
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="pt-20 pb-8 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-4xl font-bold text-white">My Dividend Tracker</h1>
+                        <p class="text-slate-400 mt-2">Track your passive income journey</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-emerald-400" id="ytd-total">£506.82</div>
+                        <div class="text-sm text-slate-400">2025 YTD</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">All Time Total</p>
+                    <p class="text-2xl font-bold text-white">£1,338.22</p>
+                </div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">Best Month Ever</p>
+                    <p class="text-2xl font-bold text-amber-400">£117.14</p>
+                    <p class="text-xs text-slate-500">Sep 2025</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">2025 Avg/Month</p>
+                    <p class="text-2xl font-bold text-emerald-400">£56.31</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">YoY Growth</p>
+                    <p class="text-2xl font-bold text-blue-400">+151.2%</p>
+                </div>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 mb-6">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="showView('table')" id="btn-table" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                        Table View
+                    </button>
+                    <button onclick="showView('chart')" id="btn-chart" class="px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">
+                        Chart View
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div id="table-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-slate-700">
+                                <th class="p-3 text-left font-semibold text-slate-200">Month</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2020</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2021</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2022</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2023</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2024</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2025</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Chart View -->
+            <div id="chart-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6" style="display: none;">
+                <canvas id="myChart" height="100"></canvas>
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-6 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                <h3 class="font-semibold text-slate-200 mb-3">Color Legend</h3>
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-amber-900 border-2 border-amber-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Best Month of Year</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-emerald-900 border-2 border-emerald-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Better than Last Year</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-red-900 border-2 border-red-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Worse than Last Year</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Menu toggle
+        function toggleMenu() {
+            const menu = document.getElementById('menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu');
+            const button = event.target.closest('button');
+            
+            if (!menu.contains(event.target) && button?.onclick !== toggleMenu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Dividend data
+        const data = {
+            2020: { Jan: 2.38, Feb: 8.05, Mar: 6.29, Apr: 0.63, May: 6.29, Jun: 6.27, Jul: 5.96, Aug: 11.07, Sep: 15.34, Oct: 0.71, Nov: 9.19, Dec: 6.77 },
+            2021: { Jan: 2.74, Feb: 82.94, Mar: 12.42, Apr: 4.28, May: 4.01, Jun: 9.11, Jul: 8.97, Aug: 18.00, Sep: 18.24, Oct: 3.07, Nov: 9.00, Dec: 6.28 },
+            2022: { Jan: 3.50, Feb: 10.80, Mar: 8.00, Apr: 12.00, May: 8.50, Jun: 23.00, Jul: 6.00, Aug: 14.00, Sep: 23.50, Oct: 2.20, Nov: 11.00, Dec: 9.00 },
+            2023: { Jan: 5.85, Feb: 13.39, Mar: 11.00, Apr: 9.77, May: 10.69, Jun: 24.19, Jul: 7.29, Aug: 23.16, Sep: 26.96, Oct: 9.50, Nov: 16.61, Dec: 17.56 },
+            2024: { Jan: 7.33, Feb: 8.26, Mar: 11.89, Apr: 19.69, May: 19.44, Jun: 33.42, Jul: 27.60, Aug: 19.03, Sep: 34.56, Oct: 30.54, Nov: 20.31, Dec: 33.85 },
+            2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: null, Nov: null, Dec: null }
+        };
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
+
+        function getComparison(year, month) {
+            const yearIndex = years.indexOf(year);
+            if (yearIndex === 0 || data[year][month] === null) return 'neutral';
+            
+            const prevYear = years[yearIndex - 1];
+            const currentVal = data[year][month];
+            const prevVal = data[prevYear][month];
+            
+            if (prevVal === null || currentVal === null) return 'neutral';
+            
+            // Check if this is the best month of THIS YEAR only
+            const yearValues = Object.values(data[year]).filter(v => v !== null);
+            const isBestOfYear = currentVal === Math.max(...yearValues);
+            
+            if (isBestOfYear) return 'best';
+            return currentVal > prevVal ? 'better' : 'worse';
+        }
+
+        function getColorClass(status) {
+            switch(status) {
+                case 'best': return 'bg-amber-900 border-amber-500 text-amber-100';
+                case 'better': return 'bg-emerald-900 border-emerald-500 text-emerald-100';
+                case 'worse': return 'bg-red-900 border-red-500 text-red-100';
+                default: return 'bg-slate-700 border-slate-600 text-slate-300';
+            }
+        }
+
+        function buildTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            months.forEach(month => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-700 hover:bg-slate-750';
+                
+                const monthCell = document.createElement('td');
+                monthCell.className = 'p-3 font-medium text-slate-200';
+                monthCell.textContent = month;
+                row.appendChild(monthCell);
+                
+                years.forEach(year => {
+                    const cell = document.createElement('td');
+                    cell.className = 'p-3 text-right';
+                    
+                    const value = data[year][month];
+                    const status = getComparison(year, month);
+                    
+                    const span = document.createElement('span');
+                    span.className = `inline-block px-3 py-1 rounded border-2 ${getColorClass(status)} font-medium`;
+                    span.textContent = value !== null ? `£${value.toFixed(2)}` : '-';
+                    
+                    cell.appendChild(span);
+                    row.appendChild(cell);
+                });
+                
+                tbody.appendChild(row);
+            });
+            
+            // Add totals row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'bg-slate-700 font-bold';
+            const totalLabel = document.createElement('td');
+            totalLabel.className = 'p-3 text-slate-200';
+            totalLabel.textContent = 'Year Total';
+            totalRow.appendChild(totalLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-200';
+                const total = Object.values(data[year]).reduce((sum, val) => sum + (val || 0), 0);
+                cell.textContent = `£${total.toFixed(2)}`;
+                totalRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(totalRow);
+
+            // Add average row
+            const avgRow = document.createElement('tr');
+            avgRow.className = 'bg-slate-750 font-semibold';
+            const avgLabel = document.createElement('td');
+            avgLabel.className = 'p-3 text-slate-300';
+            avgLabel.textContent = 'Monthly Average';
+            avgRow.appendChild(avgLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-300';
+                const values = Object.values(data[year]).filter(v => v !== null);
+                const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+                cell.textContent = `£${avg.toFixed(2)}`;
+                avgRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(avgRow);
+        }
+
+        function showView(view) {
+            const tableView = document.getElementById('table-view');
+            const chartView = document.getElementById('chart-view');
+            const btnTable = document.getElementById('btn-table');
+            const btnChart = document.getElementById('btn-chart');
+            
+            if (view === 'table') {
+                tableView.style.display = 'block';
+                chartView.style.display = 'none';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+            } else {
+                tableView.style.display = 'none';
+                chartView.style.display = 'block';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                initChart();
+            }
+        }
+
+        let myChart = null;
+
+        function initChart() {
+            if (myChart) return;
+            
+            const ctx = document.getElementById('myChart').getContext('2d');
+            
+            const datasets = years.map((year, index) => {
+                const colors = ['#818cf8', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#60a5fa'];
+                return {
+                    label: year,
+                    data: months.map(month => data[year][month]),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index] + '20',
+                    tension: 0.4,
+                    borderWidth: year === '2025' ? 3 : 2
+                };
+            });
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#cbd5e1'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += '£' + context.parsed.y.toFixed(2);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#cbd5e1',
+                                callback: function(value) {
+                                    return '£' + value;
+                                }
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#cbd5e1'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        buildTable();
+    </script>
+</body>
+</html>
