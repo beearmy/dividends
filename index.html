@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dividend Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 min-h-screen">
+    <!-- Hamburger Menu -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-white text-xl font-bold">💷 Dividend Tracker</span>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="toggleMenu()" class="text-slate-300 hover:text-white p-2">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dropdown Menu -->
+    <div id="menu" class="hidden fixed top-16 right-4 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-40 min-w-[200px]">
+        <div class="py-2">
+            <a href="index.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                Home
+            </a>
+            <button onclick="showPasswordPrompt()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                My Tracker 🔒
+            </button>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-white mb-4">Enter Password</h2>
+            <p class="text-slate-400 mb-6">Please enter your password to access your personal dividend tracker.</p>
+            <input 
+                type="password" 
+                id="passwordInput" 
+                placeholder="Password"
+                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 mb-4"
+                onkeypress="if(event.key === 'Enter') checkPassword()"
+            />
+            <div id="errorMessage" class="text-red-400 text-sm mb-4 hidden">
+                Incorrect password. Please try again.
+            </div>
+            <div class="flex gap-3">
+                <button 
+                    onclick="checkPassword()"
+                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                    Submit
+                </button>
+                <button 
+                    onclick="hidePasswordPrompt()"
+                    class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg font-medium transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="pt-20 pb-8 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-4xl font-bold text-white">Dividend Income Tracker</h1>
+                        <p class="text-slate-400 mt-2">Track your passive income journey</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-emerald-400" id="ytd-total">£0.00</div>
+                        <div class="text-sm text-slate-400">2025 YTD</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">All Time Total</p>
+                    <p class="text-2xl font-bold text-white" id="all-time-total">£0.00</p>
+                </div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">Best Month Ever</p>
+                    <p class="text-2xl font-bold text-amber-400" id="best-month">£0.00</p>
+                    <p class="text-xs text-slate-500" id="best-month-name">-</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">2025 Avg/Month</p>
+                    <p class="text-2xl font-bold text-emerald-400" id="avg-month">£0.00</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">YoY Growth</p>
+                    <p class="text-2xl font-bold text-blue-400" id="yoy-growth">-</p>
+                </div>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 mb-6">
+                <div class="flex flex-wrap gap-2 justify-between items-center">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="showView('table')" id="btn-table" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                            Table View
+                        </button>
+                        <button onclick="showView('chart')" id="btn-chart" class="px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">
+                            Chart View
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveData()" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+                            💾 Save
+                        </button>
+                        <button onclick="clearData()" class="px-4 py-2 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white transition-colors">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div id="table-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-slate-700">
+                                <th class="p-3 text-left font-semibold text-slate-200">Month</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2020</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2021</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2022</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2023</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2024</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2025</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Chart View -->
+            <div id="chart-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6" style="display: none;">
+                <canvas id="myChart" height="100"></canvas>
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-6 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                <h3 class="font-semibold text-slate-200 mb-3">Color Legend & Instructions</h3>
+                <div class="flex flex-wrap gap-4 mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-amber-900 border-2 border-amber-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Best Month of Year</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-emerald-900 border-2 border-emerald-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Better than Last Year</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-8 bg-red-900 border-2 border-red-500 rounded"></div>
+                        <span class="text-sm text-slate-300">Worse than Last Year</span>
+                    </div>
+                </div>
+                <p class="text-slate-400 text-sm">💡 <strong>Click any cell</strong> to edit the value. Don't forget to click <strong>Save</strong> to keep your data!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize blank data
+        let data = {
+            2020: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+            2021: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+            2022: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+            2023: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+            2024: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+            2025: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 }
+        };
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const years = ['2020', '2021', '2022', '2023', '2024', '2025'];
+
+        // Load saved data from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('dividendTrackerData');
+            if (saved) {
+                data = JSON.parse(saved);
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('dividendTrackerData', JSON.stringify(data));
+            alert('✅ Data saved successfully!');
+        }
+
+        // Clear all data
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+                data = {
+                    2020: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+                    2021: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+                    2022: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+                    2023: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+                    2024: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 },
+                    2025: { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0, Jul: 0, Aug: 0, Sep: 0, Oct: 0, Nov: 0, Dec: 0 }
+                };
+                saveData();
+                updateStats();
+                buildTable();
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+            }
+        }
+
+        // Menu functions
+        function toggleMenu() {
+            const menu = document.getElementById('menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showPasswordPrompt() {
+            document.getElementById('passwordModal').classList.remove('hidden');
+            document.getElementById('passwordInput').focus();
+            toggleMenu();
+        }
+
+        function hidePasswordPrompt() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (password === 'andydividends') {
+                window.location.href = 'tracker.html';
+            } else {
+                errorMessage.classList.remove('hidden');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu');
+            const button = event.target.closest('button');
+            
+            if (!menu.contains(event.target) && button?.onclick !== toggleMenu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('passwordModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                hidePasswordPrompt();
+            }
+        });
+
+        function getComparison(year, month) {
+            const yearIndex = years.indexOf(year);
+            if (yearIndex === 0 || data[year][month] === null || data[year][month] === 0) return 'neutral';
+            
+            const prevYear = years[yearIndex - 1];
+            const currentVal = data[year][month];
+            const prevVal = data[prevYear][month];
+            
+            if (prevVal === null || currentVal === null || prevVal === 0) return 'neutral';
+            
+            const yearValues = Object.values(data[year]).filter(v => v !== null && v > 0);
+            if (yearValues.length === 0) return 'neutral';
+            const isBestOfYear = currentVal === Math.max(...yearValues);
+            
+            if (isBestOfYear) return 'best';
+            return currentVal > prevVal ? 'better' : 'worse';
+        }
+
+        function getColorClass(status) {
+            switch(status) {
+                case 'best': return 'bg-amber-900 border-amber-500 text-amber-100';
+                case 'better': return 'bg-emerald-900 border-emerald-500 text-emerald-100';
+                case 'worse': return 'bg-red-900 border-red-500 text-red-100';
+                default: return 'bg-slate-700 border-slate-600 text-slate-300';
+            }
+        }
+
+        function editCell(year, month, element) {
+            const currentValue = data[year][month];
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.value = currentValue;
+            input.className = 'w-full px-2 py-1 bg-slate-900 text-white rounded border border-blue-500 focus:outline-none';
+            
+            const parent = element.parentElement;
+            parent.innerHTML = '';
+            parent.appendChild(input);
+            input.focus();
+            input.select();
+            
+            input.addEventListener('blur', function() {
+                const newValue = parseFloat(input.value) || 0;
+                data[year][month] = newValue;
+                updateStats();
+                buildTable();
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+            });
+            
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    input.blur();
+                }
+            });
+        }
+
+        function updateStats() {
+            // YTD Total
+            const ytdTotal = Object.values(data['2025']).reduce((sum, val) => sum + (val || 0), 0);
+            document.getElementById('ytd-total').textContent = `£${ytdTotal.toFixed(2)}`;
+            
+            // All Time Total
+            const allTimeTotal = years.reduce((sum, year) => {
+                return sum + Object.values(data[year]).reduce((s, v) => s + (v || 0), 0);
+            }, 0);
+            document.getElementById('all-time-total').textContent = `£${allTimeTotal.toFixed(2)}`;
+            
+            // Best Month Ever
+            let bestValue = 0;
+            let bestMonthName = '-';
+            years.forEach(year => {
+                months.forEach(month => {
+                    const val = data[year][month] || 0;
+                    if (val > bestValue) {
+                        bestValue = val;
+                        bestMonthName = `${month} ${year}`;
+                    }
+                });
+            });
+            document.getElementById('best-month').textContent = `£${bestValue.toFixed(2)}`;
+            document.getElementById('best-month-name').textContent = bestMonthName;
+            
+            // 2025 Avg
+            const values2025 = Object.values(data['2025']).filter(v => v > 0);
+            const avg2025 = values2025.length > 0 ? values2025.reduce((s, v) => s + v, 0) / values2025.length : 0;
+            document.getElementById('avg-month').textContent = `£${avg2025.toFixed(2)}`;
+            
+            // YoY Growth
+            const total2024 = Object.values(data['2024']).reduce((sum, val) => sum + (val || 0), 0);
+            const total2025 = ytdTotal;
+            const months2025 = Object.values(data['2025']).filter(v => v > 0).length;
+            const avg2024 = total2024 / 12;
+            const projectedYoY = months2025 > 0 ? (((total2025 / months2025) / avg2024 - 1) * 100) : 0;
+            document.getElementById('yoy-growth').textContent = projectedYoY > 0 ? `+${projectedYoY.toFixed(1)}%` : total2024 > 0 ? `${projectedYoY.toFixed(1)}%` : '-';
+        }
+
+        function buildTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            months.forEach(month => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-700 hover:bg-slate-750';
+                
+                const monthCell = document.createElement('td');
+                monthCell.className = 'p-3 font-medium text-slate-200';
+                monthCell.textContent = month;
+                row.appendChild(monthCell);
+                
+                years.forEach(year => {
+                    const cell = document.createElement('td');
+                    cell.className = 'p-3 text-right';
+                    
+                    const value = data[year][month];
+                    const status = getComparison(year, month);
+                    
+                    const span = document.createElement('span');
+                    span.className = `inline-block px-3 py-1 rounded border-2 ${getColorClass(status)} font-medium cursor-pointer hover:opacity-80`;
+                    span.textContent = `£${value.toFixed(2)}`;
+                    span.onclick = () => editCell(year, month, span);
+                    
+                    cell.appendChild(span);
+                    row.appendChild(cell);
+                });
+                
+                tbody.appendChild(row);
+            });
+            
+            // Add totals row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'bg-slate-700 font-bold';
+            const totalLabel = document.createElement('td');
+            totalLabel.className = 'p-3 text-slate-200';
+            totalLabel.textContent = 'Year Total';
+            totalRow.appendChild(totalLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-200';
+                const total = Object.values(data[year]).reduce((sum, val) => sum + (val || 0), 0);
+                cell.textContent = `£${total.toFixed(2)}`;
+                totalRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(totalRow);
+
+            // Add average row
+            const avgRow = document.createElement('tr');
+            avgRow.className = 'bg-slate-750 font-semibold';
+            const avgLabel = document.createElement('td');
+            avgLabel.className = 'p-3 text-slate-300';
+            avgLabel.textContent = 'Monthly Average';
+            avgRow.appendChild(avgLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-300';
+                const values = Object.values(data[year]).filter(v => v > 0);
+                const avg = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
+                cell.textContent = `£${avg.toFixed(2)}`;
+                avgRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(avgRow);
+        }
+
+        function showView(view) {
+            const tableView = document.getElementById('table-view');
+            const chartView = document.getElementById('chart-view');
+            const btnTable = document.getElementById('btn-table');
+            const btnChart = document.getElementById('btn-chart');
+            
+            if (view === 'table') {
+                tableView.style.display = 'block';
+                chartView.style.display = 'none';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+            } else {
+                tableView.style.display = 'none';
+                chartView.style.display = 'block';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                initChart();
+            }
+        }
+
+        let myChart = null;
+
+        function initChart() {
+            if (myChart) return;
+            
+            const ctx = document.getElementById('myChart').getContext('2d');
+            
+            const datasets = years.map((year, index) => {
+                const colors = ['#818cf8', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#60a5fa'];
+                return {
+                    label: year,
+                    data: months.map(month => data[year][month]),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index] + '20',
+                    tension: 0.4,
+                    borderWidth: year === '2025' ? 3 : 2
+                };
+            });
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#cbd5e1'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += '£' + context.parsed.y.toFixed(2);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#cbd5e1',
+                                callback: function(value) {
+                                    return '£' + value;
+                                }
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#cbd5e1'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        loadData();
+        updateStats();
+        buildTable();
+    </script>
+</body>
+</html>
