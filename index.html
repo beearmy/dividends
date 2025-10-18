@@ -17,6 +17,7 @@
     <title>Dividend Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 min-h-screen">
     <!-- Hamburger Menu -->
@@ -311,9 +312,11 @@
             const errorMessage = document.getElementById('errorMessage');
             
             // Set your own password here
-            const correctPassword = 'andydividends';
+            const correctPasswordHash = 'd5378a00c61377598c6f3dc4a00d4507b68f7e214bbee32ac241d6957aa0b7bd';
             
-            if (password === correctPassword) {
+            const hashedPassword = CryptoJS.SHA256(password).toString();
+
+            if (hashedPassword === correctPasswordHash) {
                 window.location.href = 'tracker.html';
             } else {
                 errorMessage.classList.remove('hidden');
