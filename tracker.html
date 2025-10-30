@@ -826,10 +826,8 @@
 
             async function loadSavedData() {
                 try {
-                    const [pieResponse, historyResponse] = await Promise.all([
-                        fetch('/api/pieAllocations'),
-                        fetch('/api/yieldHistory')
-                    ]);
+                    const pieResponse = await fetch('/api/pieAllocations');
+                    const historyResponse = await fetch('/api/yieldHistory');
 
                     if (pieResponse.ok) {
                         const pieResult = await pieResponse.json();
