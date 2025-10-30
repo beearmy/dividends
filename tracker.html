@@ -538,11 +538,11 @@
         // --- Investment Pie Yield Tracker ---
         document.addEventListener('DOMContentLoaded', () => {
             let pies = [
-                { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#3b82f6' },
+                { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#f59e0b' },
                 { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
                 { name: 'Medium Risk', currentYield: 3.03, allocation: 0, targetAllocation: null, color: '#8b5cf6' },
                 { name: 'High Risk', currentYield: 22.0, allocation: 0, targetAllocation: null, color: '#ef4444' },
-                { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#f59e0b' }
+                { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#3b82f6' }
             ];
 
             let historicalData = [
@@ -604,7 +604,10 @@
                 pieCardsContainer.innerHTML = '';
                 const totalAllocation = getTotalAllocation();
 
-                pies.forEach((pie, index) => {
+                const sortedPies = [...pies].sort((a, b) => b.allocation - a.allocation);
+
+                sortedPies.forEach(pie => {
+                    const originalIndex = pies.findIndex(p => p.name === pie.name);
                     const card = document.createElement('div');
                     card.className = "bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 hover:border-slate-600 transition-all";
 
@@ -620,17 +623,17 @@
                         </div>
                         <div class="mb-4">
                             <label class="text-xs text-slate-400 block mb-1">Current Yield (%)</label>
-                            <input type="number" value="${pie.currentYield || ''}" step="0.01" class="yield-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-2xl font-bold border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${index}">
+                            <input type="number" value="${pie.currentYield || ''}" step="0.01" class="yield-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-2xl font-bold border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
                         </div>
                         <div class="mb-2">
                             <label class="text-xs text-slate-400 block mb-1">Investment (£)</label>
-                            <input type="number" value="${pie.allocation || ''}" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${index}">
+                            <input type="number" value="${pie.allocation || ''}" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
                         </div>
                         ${pie.allocation > 0 ? `
                             <div class="flex justify-between items-center mt-3 text-xs">
                                 <span class="text-slate-400">${allocationPercent}% of portfolio</span>
                                 <div class="flex items-center gap-2">
-                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-16 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none" step="0.1" data-index="${index}">
+                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-16 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none" step="0.1" data-index="${originalIndex}">
                                      <span class="px-2 py-1 rounded font-medium ${status.color} text-white">${status.text}</span>
                                 </div>
                             </div>
@@ -640,9 +643,13 @@
                 });
             }
 
-            function updateUI() {
+            function updateCalculatedDisplays() {
                 blendedYieldEl.textContent = `${calculateBlendedYield()}%`;
                 totalAllocationEl.textContent = `Total Portfolio: £${getTotalAllocation().toLocaleString()}`;
+            }
+
+            function updateUI() {
+                updateCalculatedDisplays();
                 renderPieCards();
                 updateSaveButton();
                 renderYieldChart();
@@ -663,20 +670,45 @@
             pieCardsContainer.addEventListener('input', (e) => {
                 hasUnsavedChanges = true;
                 const index = parseInt(e.target.dataset.index);
-                if (e.target.classList.contains('yield-input')) {
-                    pies[index].currentYield = parseFloat(e.target.value) || 0;
-                } else if (e.target.classList.contains('allocation-input')) {
-                    pies[index].allocation = parseFloat(e.target.value) || 0;
-                } else if (e.target.classList.contains('target-input')) {
-                    pies[index].targetAllocation = e.target.value === '' ? null : parseFloat(e.target.value);
+                const target = e.target;
+
+                if (target.classList.contains('yield-input')) {
+                    pies[index].currentYield = parseFloat(target.value) || 0;
+                } else if (target.classList.contains('allocation-input')) {
+                    pies[index].allocation = parseFloat(target.value) || 0;
+                } else if (target.classList.contains('target-input')) {
+                    pies[index].targetAllocation = target.value === '' ? null : parseFloat(target.value);
                 }
-                updateUI();
+
+                // Only update the totals, don't re-render the whole list
+                updateCalculatedDisplays();
+                updateSaveButton();
             });
+
+            pieCardsContainer.addEventListener('focusout', (e) => {
+                const target = e.target;
+                if (target.classList.contains('allocation-input') || target.classList.contains('target-input')) {
+                    // Re-render the cards to update sorting and percentages
+                    updateUI();
+                }
+            });
+
+            function setInputsDisabled(disabled) {
+                const inputs = pieCardsContainer.querySelectorAll('input');
+                inputs.forEach(input => input.disabled = disabled);
+            }
 
             quarterSelect.addEventListener('change', (e) => {
                 selectedQuarter = e.target.value;
-                hasUnsavedChanges = true;
-                updateSaveButton();
+                if (selectedQuarter) {
+                    setInputsDisabled(false);
+                    hasUnsavedChanges = true; // Or check against saved data
+                    updateSaveButton();
+                    quarterSelect.classList.remove('border-red-500');
+                } else {
+                    setInputsDisabled(true);
+                    updateSaveButton();
+                }
             });
 
             function generateQuarterOptions() {
@@ -721,12 +753,17 @@
             }
 
             saveBtn.addEventListener('click', () => {
-                localStorage.setItem('pieAllocations', JSON.stringify(pies));
-                if (selectedQuarter) {
-                    if (saveYieldToHistory()) {
-                         localStorage.setItem('yieldHistory', JSON.stringify(historicalData));
-                    }
+                if (!selectedQuarter) {
+                    alert('Please select a quarter before saving.');
+                    quarterSelect.classList.add('border-red-500');
+                    return;
                 }
+
+                localStorage.setItem('pieAllocations', JSON.stringify(pies));
+                if (saveYieldToHistory()) {
+                    localStorage.setItem('yieldHistory', JSON.stringify(historicalData));
+                }
+
                 hasUnsavedChanges = false;
                 updateUI();
 
@@ -782,11 +819,24 @@
                 });
             }
 
+            function initializeNov2025Data() {
+                const hasNov2025 = historicalData.some(d => d.date === 'Nov 2025');
+                if (!hasNov2025) {
+                    const nov2025Data = { date: 'Nov 2025' };
+                    pies.forEach(pie => {
+                        nov2025Data[pie.name] = pie.currentYield;
+                    });
+                    historicalData.push(nov2025Data);
+                }
+            }
+
             // Initial Load
             loadSavedData();
+            initializeNov2025Data();
             generateQuarterOptions();
             nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
             updateUI();
+            setInputsDisabled(true);
         });
     </script>
 </body>
