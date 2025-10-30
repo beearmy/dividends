@@ -59,7 +59,6 @@
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h1 class="text-4xl font-bold text-white">My Dividend Tracker</h1>
-                        <p class="text-slate-400 mt-2">Track your passive income journey</p>
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-emerald-400" id="ytd-total">£506.82</div>
@@ -156,15 +155,18 @@
 
 
             <!-- Investment Pie Yield Tracker -->
-            <div id="yield-tracker-container" class="mt-8">
-                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
-                    <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
-                        <div>
-                            <h2 class="text-3xl font-bold text-white">Investment Pie Yield Tracker</h2>
-                            <p class="text-slate-400 mt-2">Monitor dividend yields across your portfolio</p>
-                        </div>
+            <details id="yield-tracker-container" class="mt-8 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl group">
+                <summary class="p-6 cursor-pointer group-open:border-b group-open:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">Investment Pie Yield Tracker</h2>
                     </div>
-
+                    <div class="transform transition-transform duration-200 group-open:rotate-180">
+                        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </summary>
+                <div class="p-6">
                     <div class="flex flex-wrap gap-4 items-center justify-between mb-6 bg-slate-800 border border-slate-700 rounded-lg p-4">
                         <div class="flex items-center gap-4">
                             <select id="month-select" class="px-4 py-3 rounded-lg font-semibold bg-slate-700 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none">
@@ -199,24 +201,27 @@
                             <canvas id="yield-chart"></canvas>
                         </div>
                     </div>
-
                 </div>
-            </div>
+            </details>
 
             <!-- Goals Tracker -->
-            <div id="goals-container" class="mt-8">
-                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
-                    <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
-                        <div>
-                            <h2 class="text-3xl font-bold text-white">My Goals</h2>
-                            <p class="text-slate-400 mt-2">Track your financial goals and progress</p>
-                        </div>
+            <details id="goals-container" class="mt-8 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl group">
+                <summary class="p-6 cursor-pointer group-open:border-b group-open:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">My Goals</h2>
                     </div>
+                    <div class="transform transition-transform duration-200 group-open:rotate-180">
+                        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </summary>
+                <div class="p-6">
                     <div id="goals-list" class="space-y-4">
                         <!-- Goals will be dynamically inserted here -->
                     </div>
                 </div>
-            </div>
+            </details>
         </div>
     </div>
 
@@ -1047,7 +1052,7 @@
                 return parts.join(', ');
             }
 
-            goals.forEach(goal => {
+            function renderGoal(goal) {
                 const goalEl = document.createElement('div');
                 goalEl.className = 'goal-item bg-slate-900/50 border border-slate-700 rounded-lg p-4 transition-all duration-300';
 
@@ -1057,7 +1062,7 @@
                     : calculateDateDifference(new Date().toISOString().split('T')[0], goal.targetDate);
 
                 let statusText = '';
-                if(isCompleted) {
+                if (isCompleted) {
                     if (completionStatus.isEarly) {
                         statusText = `Completed ${formatDifference(completionStatus)} ahead of schedule.`;
                     } else {
@@ -1082,8 +1087,6 @@
                     </div>
                 `;
 
-                goalsList.appendChild(goalEl);
-
                 const checkbox = goalEl.querySelector(`#goal-${goal.id}`);
                 const label = goalEl.querySelector('label');
 
@@ -1097,7 +1100,47 @@
 
                 checkbox.addEventListener('change', updateAppearance);
                 updateAppearance();
-            });
+                return goalEl;
+            }
+
+            function renderGoals() {
+                goalsList.innerHTML = '';
+                const activeGoals = goals.filter(g => g.completedDate === null);
+                const completedGoals = goals.filter(g => g.completedDate !== null);
+
+                activeGoals.forEach(goal => {
+                    goalsList.appendChild(renderGoal(goal));
+                });
+
+                if (completedGoals.length > 0) {
+                    const details = document.createElement('details');
+                    details.className = 'bg-slate-900/50 border border-slate-700 rounded-lg group';
+
+                    const summary = document.createElement('summary');
+                    summary.className = 'p-4 cursor-pointer flex items-center justify-between';
+                    summary.innerHTML = `
+                        <h3 class="text-lg font-medium text-slate-200">Completed Goals (${completedGoals.length})</h3>
+                        <div class="transform transition-transform duration-200 group-open:rotate-180">
+                            <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    `;
+
+                    const completedContainer = document.createElement('div');
+                    completedContainer.className = 'p-4 space-y-4 border-t border-slate-700';
+
+                    completedGoals.forEach(goal => {
+                        completedContainer.appendChild(renderGoal(goal));
+                    });
+
+                    details.appendChild(summary);
+                    details.appendChild(completedContainer);
+                    goalsList.appendChild(details);
+                }
+            }
+
+            renderGoals();
         });
     </script>
 </body>
