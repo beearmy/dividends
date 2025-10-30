@@ -161,6 +161,57 @@
                 </div>
                 <p class="text-slate-400 text-sm">💡 <strong>Click any cell</strong> to edit the value. Don't forget to click <strong>Save</strong> to keep your changes!</p>
             </div>
+
+            <!-- Investment Pie Yield Tracker -->
+            <div id="yield-tracker-container" class="mt-8">
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
+                    <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white">Investment Pie Yield Tracker</h2>
+                            <p class="text-slate-400 mt-2">Monitor dividend yields across your portfolio</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 items-center justify-between mb-6 bg-slate-800 border border-slate-700 rounded-lg p-4">
+                        <div class="flex items-center gap-4">
+                            <select id="quarter-select" class="px-4 py-3 rounded-lg font-semibold bg-slate-700 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none">
+                                <option value="">Select Quarter for Yield Update</option>
+                            </select>
+                        </div>
+                        <button id="save-yield-btn" class="px-6 py-3 rounded-lg font-semibold transition-all bg-slate-700 text-slate-400 cursor-default">
+                            💾 Save Changes
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-slate-900/50 border border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+                             <h3 class="text-slate-400 text-lg mb-2">Total Blended Current Yield</h3>
+                             <p id="blended-yield" class="text-5xl font-bold text-emerald-400 mb-2">0.00%</p>
+                             <p id="total-allocation" class="text-slate-500">Total Portfolio: £0</p>
+                             <p class="text-xs text-slate-600 mt-1">Weighted by allocation amounts</p>
+                        </div>
+                        <div id="pie-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:col-span-2">
+                            <!-- Pie cards will be dynamically inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 mt-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-slate-200">Yield Trends Over Time</h3>
+                                <p id="next-update" class="text-sm text-slate-400">Next Update: </p>
+                            </div>
+                        </div>
+                        <div style="height: 300px;">
+                            <canvas id="yield-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                        <p class="text-slate-400 text-sm">💡 How it works: Enter the amount invested in each pie. The blended yield will automatically calculate based on your allocation weights. Yields are tracked quarterly (end of Feb, May, Aug, Nov). Click Save to store your data.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -483,6 +534,260 @@
         loadData();
         updateStats();
         buildTable();
+
+        // --- Investment Pie Yield Tracker ---
+        document.addEventListener('DOMContentLoaded', () => {
+            let pies = [
+                { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#3b82f6' },
+                { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
+                { name: 'Medium Risk', currentYield: 3.03, allocation: 0, targetAllocation: null, color: '#8b5cf6' },
+                { name: 'High Risk', currentYield: 22.0, allocation: 0, targetAllocation: null, color: '#ef4444' },
+                { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#f59e0b' }
+            ];
+
+            let historicalData = [
+                { date: 'Feb 2024', 'Income Factory': 9.5, 'Low Risk': 3.8, 'Medium Risk': 2.5, 'High Risk': 18.5, 'Top UK Payers': 7.2 },
+                { date: 'May 2024', 'Income Factory': 9.8, 'Low Risk': 3.9, 'Medium Risk': 2.6, 'High Risk': 19.2, 'Top UK Payers': 7.4 },
+                { date: 'Aug 2024', 'Income Factory': 10.1, 'Low Risk': 4.0, 'Medium Risk': 2.7, 'High Risk': 20.0, 'Top UK Payers': 7.6 },
+                { date: 'Nov 2024', 'Income Factory': 10.4, 'Low Risk': 4.2, 'Medium Risk': 2.85, 'High Risk': 21.0, 'Top UK Payers': 7.9 },
+                { date: 'Feb 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 }
+            ];
+
+            let selectedQuarter = '';
+            let hasUnsavedChanges = false;
+            let yieldChart = null;
+
+            const blendedYieldEl = document.getElementById('blended-yield');
+            const totalAllocationEl = document.getElementById('total-allocation');
+            const pieCardsContainer = document.getElementById('pie-cards-container');
+            const quarterSelect = document.getElementById('quarter-select');
+            const saveBtn = document.getElementById('save-yield-btn');
+            const nextUpdateEl = document.getElementById('next-update');
+
+            function getNextUpdate() {
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+                const quarterMonths = [1, 4, 7, 10];
+                const quarterNames = ['Feb', 'May', 'Aug', 'Nov'];
+                let nextQuarterIndex = quarterMonths.findIndex(month => month > currentMonth);
+                if (nextQuarterIndex === -1) {
+                    return `${quarterNames[0]} ${currentYear + 1}`;
+                }
+                return `${quarterNames[nextQuarterIndex]} ${currentYear}`;
+            }
+
+            function calculateBlendedYield() {
+                const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                if (totalAllocation === 0) return '0.00';
+                const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
+                return (weightedYield / totalAllocation).toFixed(2);
+            }
+
+            function getTotalAllocation() {
+                return pies.reduce((sum, pie) => sum + pie.allocation, 0);
+            }
+
+            function getAllocationStatus(currentPercent, targetPercent) {
+                if (targetPercent === null || targetPercent === undefined) {
+                    return { color: 'bg-slate-600', text: 'No target' };
+                }
+                const difference = Math.abs(currentPercent - targetPercent);
+                if (difference <= 5) {
+                    return { color: 'bg-emerald-500', text: 'On target' };
+                } else {
+                    return { color: 'bg-red-500', text: 'Off target' };
+                }
+            }
+
+            function renderPieCards() {
+                pieCardsContainer.innerHTML = '';
+                const totalAllocation = getTotalAllocation();
+
+                pies.forEach((pie, index) => {
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 hover:border-slate-600 transition-all";
+
+                    const allocationPercent = totalAllocation > 0 ? ((pie.allocation / totalAllocation) * 100).toFixed(1) : 0;
+                    const status = getAllocationStatus(allocationPercent, pie.targetAllocation);
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 rounded-full mr-3" style="background-color: ${pie.color};"></div>
+                                <h4 class="font-semibold text-white">${pie.name}</h4>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="text-xs text-slate-400 block mb-1">Current Yield (%)</label>
+                            <input type="number" value="${pie.currentYield || ''}" step="0.01" class="yield-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-2xl font-bold border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${index}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="text-xs text-slate-400 block mb-1">Investment (£)</label>
+                            <input type="number" value="${pie.allocation || ''}" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${index}">
+                        </div>
+                        ${pie.allocation > 0 ? `
+                            <div class="flex justify-between items-center mt-3 text-xs">
+                                <span class="text-slate-400">${allocationPercent}% of portfolio</span>
+                                <div class="flex items-center gap-2">
+                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-16 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none" step="0.1" data-index="${index}">
+                                     <span class="px-2 py-1 rounded font-medium ${status.color} text-white">${status.text}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    `;
+                    pieCardsContainer.appendChild(card);
+                });
+            }
+
+            function updateUI() {
+                blendedYieldEl.textContent = `${calculateBlendedYield()}%`;
+                totalAllocationEl.textContent = `Total Portfolio: £${getTotalAllocation().toLocaleString()}`;
+                renderPieCards();
+                updateSaveButton();
+                renderYieldChart();
+            }
+
+            function updateSaveButton() {
+                if (hasUnsavedChanges) {
+                    saveBtn.classList.remove('bg-slate-700', 'text-slate-400', 'cursor-default');
+                    saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-lg');
+                    saveBtn.textContent = '💾 Save Changes';
+                } else {
+                    saveBtn.classList.add('bg-slate-700', 'text-slate-400', 'cursor-default');
+                    saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-lg');
+                    saveBtn.textContent = '✓ All Saved';
+                }
+            }
+
+            pieCardsContainer.addEventListener('input', (e) => {
+                hasUnsavedChanges = true;
+                const index = parseInt(e.target.dataset.index);
+                if (e.target.classList.contains('yield-input')) {
+                    pies[index].currentYield = parseFloat(e.target.value) || 0;
+                } else if (e.target.classList.contains('allocation-input')) {
+                    pies[index].allocation = parseFloat(e.target.value) || 0;
+                } else if (e.target.classList.contains('target-input')) {
+                    pies[index].targetAllocation = e.target.value === '' ? null : parseFloat(e.target.value);
+                }
+                updateUI();
+            });
+
+            quarterSelect.addEventListener('change', (e) => {
+                selectedQuarter = e.target.value;
+                hasUnsavedChanges = true;
+                updateSaveButton();
+            });
+
+            function generateQuarterOptions() {
+                const quarters = [];
+                const currentYear = new Date().getFullYear();
+                const quarterMonths = ['Feb', 'May', 'Aug', 'Nov'];
+                for (let year = currentYear - 1; year <= currentYear + 2; year++) {
+                    quarterMonths.forEach(month => {
+                        quarters.push(`${month} ${year}`);
+                    });
+                }
+                quarters.forEach(q => {
+                    const option = document.createElement('option');
+                    option.value = q;
+                    option.textContent = q;
+                    quarterSelect.appendChild(option);
+                });
+            }
+
+            function saveYieldToHistory() {
+                if (!selectedQuarter) {
+                    alert('Please select a quarter before saving yield data');
+                    return false;
+                }
+                const existingIndex = historicalData.findIndex(d => d.date === selectedQuarter);
+                const newDataPoint = { date: selectedQuarter };
+                pies.forEach(p => { newDataPoint[p.name] = p.currentYield; });
+
+                if (existingIndex !== -1) {
+                    historicalData[existingIndex] = newDataPoint;
+                } else {
+                    historicalData.push(newDataPoint);
+                    historicalData.sort((a, b) => {
+                        const [monthA, yearA] = a.date.split(' ');
+                        const [monthB, yearB] = b.date.split(' ');
+                        const monthOrder = { Feb: 1, May: 2, Aug: 3, Nov: 4 };
+                        if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+                        return monthOrder[monthA] - monthOrder[monthB];
+                    });
+                }
+                return true;
+            }
+
+            saveBtn.addEventListener('click', () => {
+                localStorage.setItem('pieAllocations', JSON.stringify(pies));
+                if (selectedQuarter) {
+                    if (saveYieldToHistory()) {
+                         localStorage.setItem('yieldHistory', JSON.stringify(historicalData));
+                    }
+                }
+                hasUnsavedChanges = false;
+                updateUI();
+
+                const originalText = '💾 Save Changes';
+                saveBtn.textContent = '✓ Saved!';
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    updateSaveButton();
+                }, 2000);
+            });
+
+            function loadSavedData() {
+                const savedPies = localStorage.getItem('pieAllocations');
+                if (savedPies) pies = JSON.parse(savedPies);
+                const savedHistory = localStorage.getItem('yieldHistory');
+                if (savedHistory) historicalData = JSON.parse(savedHistory);
+            }
+
+            function renderYieldChart() {
+                const ctx = document.getElementById('yield-chart').getContext('2d');
+                if(yieldChart) {
+                    yieldChart.destroy();
+                }
+                yieldChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: historicalData.map(d => d.date),
+                        datasets: pies.map(pie => ({
+                            label: pie.name,
+                            data: historicalData.map(d => d[pie.name]),
+                            borderColor: pie.color,
+                            backgroundColor: `${pie.color}20`,
+                            tension: 0.4,
+                            borderWidth: 2
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: '#cbd5e1' }},
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.dataset.label}: ${context.parsed.y}%`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: false, ticks: { color: '#cbd5e1', callback: (v) => `${v}%` }, grid: { color: '#334155' }},
+                            x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' }}
+                        }
+                    }
+                });
+            }
+
+            // Initial Load
+            loadSavedData();
+            generateQuarterOptions();
+            nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
+            updateUI();
+        });
     </script>
 </body>
 </html>
