@@ -566,7 +566,9 @@
 
             let historicalData = [
                 { date: 'Oct 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
-                { date: 'Nov 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null }
+                { date: 'Nov 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null },
+                { date: 'Dec 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null },
+                { date: 'Jan 2026', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null }
             ];
 
             let selectedMonth = '';
@@ -733,13 +735,20 @@
 
             function generateMonthOptions() {
                 const months = [];
-                const currentYear = new Date().getFullYear();
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = now.getMonth();
                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                for (let year = currentYear - 1; year <= currentYear + 2; year++) {
-                    monthNames.forEach(month => {
+
+                for (let year = currentYear; year <= currentYear + 2; year++) {
+                    monthNames.forEach((month, index) => {
+                        if (year === currentYear && index < currentMonth) {
+                            return;
+                        }
                         months.push(`${month} ${year}`);
                     });
                 }
+
                 months.forEach(q => {
                     const option = document.createElement('option');
                     option.value = q;
@@ -852,18 +861,96 @@
                 if(yieldChart) {
                     yieldChart.destroy();
                 }
+
+                const blendedYieldData = historicalData.map(dataPoint => {
+                    const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                    if (totalAllocation === 0) return null;
+
+                    const weightedYield = pies.reduce((sum, pie) => {
+                        const historicalYield = dataPoint[pie.name];
+                        if (historicalYield === null || historicalYield === undefined) {
+                            return sum;
+                        }
+                        return sum + (historicalYield * pie.allocation);
+                    }, 0);
+
+                    const hasAnyYield = pies.some(pie => dataPoint[pie.name] != null);
+                    if (!hasAnyYield) {
+                        return null;
+    }
+
+                    return (weightedYield / totalAllocation).toFixed(2);
+                });
+
+                const oct2025Index = historicalData.findIndex(d => d.date === 'Oct 2025');
+
+                if (oct2025Index !== -1) {
+                    blendedYieldData[oct2025Index] = calculateBlendedYield();
+                }
+
+                const datasets = pies.map(pie => ({
+                    label: pie.name,
+                    data: historicalData.map(d => d[pie.name]),
+                    borderColor: pie.color,
+                    backgroundColor: `${pie.color}20`,
+                    tension: 0.4,
+                    borderWidth: 2
+                }));
+
+                function calculatePredictedBlendedYield() {
+                    const totalTargetAllocation = pies.reduce((sum, pie) => sum + (pie.targetAllocation || 0), 0);
+                    if (totalTargetAllocation === 0) {
+                        const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                        if (totalAllocation === 0) return 0;
+                        const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
+                        return (weightedYield / totalAllocation);
+    }
+                    const weightedYield = pies.reduce((sum, pie) => {
+                        return sum + (pie.currentYield * (pie.targetAllocation || 0));
+                    }, 0);
+                    return (weightedYield / totalTargetAllocation);
+                }
+
+                const predictedYield = calculatePredictedBlendedYield().toFixed(2);
+
+                const lastHistoricalIndex = historicalData.map(d => d.date).indexOf('Oct 2025');
+                const blendedYieldWithPrediction = [...blendedYieldData];
+
+                if (lastHistoricalIndex !== -1) {
+                    blendedYieldWithPrediction[lastHistoricalIndex + 1] = predictedYield;
+                    blendedYieldWithPrediction[lastHistoricalIndex + 2] = predictedYield;
+                }
+
+                datasets.push({
+                    label: 'Blended Yield',
+                    data: blendedYieldWithPrediction,
+                    borderColor: '#ffffff',
+                    backgroundColor: '#ffffff20',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    segment: {
+                        borderColor: ctx => {
+                            const index = ctx.p0DataIndex;
+                            if (index >= lastHistoricalIndex +1) {
+                                return 'rgba(255, 255, 255, 0.5)';
+                            }
+                            return '#ffffff';
+                        },
+                        borderDash: ctx => {
+                            const index = ctx.p0DataIndex;
+                            if (index >= lastHistoricalIndex + 1) {
+                                return [5, 5];
+                            }
+                            return undefined;
+                        }
+                    }
+                });
+
                 yieldChart = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: historicalData.map(d => d.date),
-                        datasets: pies.map(pie => ({
-                            label: pie.name,
-                            data: historicalData.map(d => d[pie.name]),
-                            borderColor: pie.color,
-                            backgroundColor: `${pie.color}20`,
-                            tension: 0.4,
-                            borderWidth: 2
-                        }))
+                        datasets: datasets
                     },
                     options: {
                         responsive: true,
