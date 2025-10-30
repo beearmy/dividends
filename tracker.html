@@ -243,18 +243,34 @@
             2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: null, Nov: null, Dec: null }
         };
 
-        // Load saved data from localStorage
-        function loadData() {
-            const saved = localStorage.getItem('dividendTrackerDataPersonal');
-            if (saved) {
-                data = JSON.parse(saved);
+        // Load saved data from backend
+        async function loadData() {
+            try {
+                const response = await fetch('/api/dividendData');
+                const result = await response.json();
+                if (result.data) {
+                    data = result.data;
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
             }
         }
 
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('dividendTrackerDataPersonal', JSON.stringify(data));
-            alert('✅ Data saved successfully!');
+        // Save data to backend
+        async function saveData() {
+            try {
+                await fetch('/api/dividendData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                alert('✅ Data saved successfully!');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                alert('❌ Error saving data.');
+            }
         }
 
         // Download data as JSON file
@@ -531,12 +547,15 @@
         }
 
         // Initialize
-        loadData();
-        updateStats();
-        buildTable();
+        async function initialize() {
+            await loadData();
+            updateStats();
+            buildTable();
+        }
+        initialize();
 
         // --- Investment Pie Yield Tracker ---
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             let pies = [
                 { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#f59e0b' },
                 { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
@@ -756,34 +775,63 @@
                 return true;
             }
 
-            saveBtn.addEventListener('click', () => {
+            saveBtn.addEventListener('click', async () => {
                 if (!selectedMonth) {
                     alert('Please select a month before saving.');
                     monthSelect.classList.add('border-red-500');
                     return;
                 }
 
-                localStorage.setItem('pieAllocations', JSON.stringify(pies));
-                if (saveYieldToHistory()) {
-                    localStorage.setItem('yieldHistory', JSON.stringify(historicalData));
+                try {
+                    await fetch('/api/pieAllocations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pies)
+                    });
+
+                    if (saveYieldToHistory()) {
+                        await fetch('/api/yieldHistory', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(historicalData)
+                        });
+                    }
+
+                    hasUnsavedChanges = false;
+                    updateUI();
+
+                    const originalText = '💾 Save Changes';
+                    saveBtn.textContent = '✓ Saved!';
+                    setTimeout(() => {
+                        saveBtn.textContent = originalText;
+                        updateSaveButton();
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error saving data:', error);
+                    alert('❌ Error saving data.');
                 }
-
-                hasUnsavedChanges = false;
-                updateUI();
-
-                const originalText = '💾 Save Changes';
-                saveBtn.textContent = '✓ Saved!';
-                setTimeout(() => {
-                    saveBtn.textContent = originalText;
-                    updateSaveButton();
-                }, 2000);
             });
 
-            function loadSavedData() {
-                const savedPies = localStorage.getItem('pieAllocations');
-                if (savedPies) pies = JSON.parse(savedPies);
-                const savedHistory = localStorage.getItem('yieldHistory');
-                if (savedHistory) historicalData = JSON.parse(savedHistory);
+            async function loadSavedData() {
+                try {
+                    const pieResponse = await fetch('/api/pieAllocations');
+                    const pieResult = await pieResponse.json();
+                    if (pieResult.data) {
+                        pies = pieResult.data;
+                    }
+
+                    const historyResponse = await fetch('/api/yieldHistory');
+                    const historyResult = await historyResponse.json();
+                    if (historyResult.data) {
+                        historicalData = historyResult.data;
+                    }
+                } catch (error) {
+                    console.error('Error loading saved data:', error);
+                }
             }
 
             function renderYieldChart() {
@@ -824,11 +872,14 @@
             }
 
             // Initial Load
-            loadSavedData();
-            generateMonthOptions();
-            nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
-            updateUI();
-            setInputsDisabled(true);
+            async function initializeTracker() {
+                await loadSavedData();
+                generateMonthOptions();
+                nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
+                updateUI();
+                setInputsDisabled(true);
+            }
+            initializeTracker();
         });
     </script>
 </body>
