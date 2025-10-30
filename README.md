@@ -9,12 +9,10 @@ A professional dividend income tracking dashboard with password-protected access
 - 📊 Interactive table view with color-coded performance
 - 📈 Chart view with historical data
 - 💰 Key statistics dashboard
-- 📥 Download your data as JSON (backup your data)
-- 📤 Import your data from JSON (restore or transfer data)
+- 💾 Data is now available across devices
 - 🎨 Professional dark theme
 - 📱 Fully responsive design
 - 🍔 Hamburger navigation menu
-- 💾 Data isolated per user (localStorage)
 
 ## Pages
 
@@ -32,7 +30,7 @@ A professional dividend income tracking dashboard with password-protected access
 
 2. **Upload your files to GitHub**
    - Extract the zip file you downloaded
-   - Drag and drop ALL files (`index.html`, `tracker.html`, `vercel.json`, `README.md`) into your GitHub repository
+   - Drag and drop ALL files (`index.html`, `tracker.html`, `vercel.json`, `README.md`, `api/`) into your GitHub repository
    - Click "Commit changes"
 
 3. **Deploy to Vercel**
@@ -59,47 +57,26 @@ const correctPassword = 'YOUR_PASSWORD_HERE';
 ```
 Replace `'YOUR_PASSWORD_HERE'` with your desired password.
 
-## Customizing Your Data
-
-To update the dividend data, edit the `tracker.html` file and find the `data` object. Update the values with your own dividend income.
-
 ## Data Management
 
-### Backup Your Data
-Click the **📥 Download** button to export your data as a JSON file. This creates a backup that you can save anywhere.
+The application now uses a Vercel Postgres database to store your data, making it available across all your devices.
 
-### Import/Restore Data
-Click the **📤 Import** button to restore data from a previously downloaded JSON file. This allows you to:
-- Restore from a backup
-- Transfer data between browsers
-- Share data between devices
+## Backend and Database
 
-### Data Isolation
-Each user's data is stored in their browser's localStorage with unique keys:
-- **Public page** (`index.html`): Uses `dividendTrackerData` key
-- **Private tracker** (`tracker.html`): Uses `dividendTrackerDataPersonal` key
+This project uses a Node.js backend with a Vercel Postgres database.
 
-This means each page maintains separate data, and data is isolated per browser/device.
+### Setting up the Database
 
-## Color Coding
+1.  **Create a Vercel Postgres Database:**
+    *   Go to your Vercel dashboard.
+    *   Navigate to the "Storage" tab.
+    *   Create a new Postgres database.
 
-- 🟡 **Gold/Amber**: Best month of the year
-- 🟢 **Green**: Better than same month last year
-- 🔴 **Red**: Worse than same month last year
-- ⚪ **Gray**: Neutral (first year or no comparison)
+2.  **Connect the Database to Your Project:**
+    *   In your Vercel project settings, go to "Storage" and connect the newly created Postgres database.
 
-## Navigation
-
-Use the hamburger menu (☰) in the top right to navigate between:
-- Home (public landing page)
-- My Tracker (password-protected)
-
-## Tech Stack
-
-- HTML5
-- Tailwind CSS (via CDN)
-- Chart.js (via CDN)
-- Vanilla JavaScript
+3.  **Set Environment Variables:**
+    *   Vercel will automatically set the necessary environment variables for you when you connect the database. These include `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_USER`, `POSTGRES_HOST`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE`. The application will use these to connect to the database.
 
 ## Security Note
 
