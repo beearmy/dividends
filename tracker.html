@@ -174,8 +174,8 @@
 
                     <div class="flex flex-wrap gap-4 items-center justify-between mb-6 bg-slate-800 border border-slate-700 rounded-lg p-4">
                         <div class="flex items-center gap-4">
-                            <select id="quarter-select" class="px-4 py-3 rounded-lg font-semibold bg-slate-700 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none">
-                                <option value="">Select Quarter for Yield Update</option>
+                            <select id="month-select" class="px-4 py-3 rounded-lg font-semibold bg-slate-700 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none">
+                                <option value="">Select Month for Yield Update</option>
                             </select>
                         </div>
                         <button id="save-yield-btn" class="px-6 py-3 rounded-lg font-semibold transition-all bg-slate-700 text-slate-400 cursor-default">
@@ -550,17 +550,19 @@
                 { date: 'May 2024', 'Income Factory': 9.8, 'Low Risk': 3.9, 'Medium Risk': 2.6, 'High Risk': 19.2, 'Top UK Payers': 7.4 },
                 { date: 'Aug 2024', 'Income Factory': 10.1, 'Low Risk': 4.0, 'Medium Risk': 2.7, 'High Risk': 20.0, 'Top UK Payers': 7.6 },
                 { date: 'Nov 2024', 'Income Factory': 10.4, 'Low Risk': 4.2, 'Medium Risk': 2.85, 'High Risk': 21.0, 'Top UK Payers': 7.9 },
-                { date: 'Feb 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 }
+                { date: 'Feb 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
+                { date: 'Oct 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
+                { date: 'Nov 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null }
             ];
 
-            let selectedQuarter = '';
+            let selectedMonth = '';
             let hasUnsavedChanges = false;
             let yieldChart = null;
 
             const blendedYieldEl = document.getElementById('blended-yield');
             const totalAllocationEl = document.getElementById('total-allocation');
             const pieCardsContainer = document.getElementById('pie-cards-container');
-            const quarterSelect = document.getElementById('quarter-select');
+            const monthSelect = document.getElementById('month-select');
             const saveBtn = document.getElementById('save-yield-btn');
             const nextUpdateEl = document.getElementById('next-update');
 
@@ -568,13 +570,17 @@
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
-                const quarterMonths = [1, 4, 7, 10];
-                const quarterNames = ['Feb', 'May', 'Aug', 'Nov'];
-                let nextQuarterIndex = quarterMonths.findIndex(month => month > currentMonth);
-                if (nextQuarterIndex === -1) {
-                    return `${quarterNames[0]} ${currentYear + 1}`;
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                let nextMonth = currentMonth + 1;
+                let nextYear = currentYear;
+
+                if (nextMonth > 11) {
+                    nextMonth = 0; // January
+                    nextYear++;
                 }
-                return `${quarterNames[nextQuarterIndex]} ${currentYear}`;
+
+                return `${monthNames[nextMonth]} ${nextYear}`;
             }
 
             function calculateBlendedYield() {
@@ -698,43 +704,43 @@
                 inputs.forEach(input => input.disabled = disabled);
             }
 
-            quarterSelect.addEventListener('change', (e) => {
-                selectedQuarter = e.target.value;
-                if (selectedQuarter) {
+            monthSelect.addEventListener('change', (e) => {
+                selectedMonth = e.target.value;
+                if (selectedMonth) {
                     setInputsDisabled(false);
                     hasUnsavedChanges = true; // Or check against saved data
                     updateSaveButton();
-                    quarterSelect.classList.remove('border-red-500');
+                    monthSelect.classList.remove('border-red-500');
                 } else {
                     setInputsDisabled(true);
                     updateSaveButton();
                 }
             });
 
-            function generateQuarterOptions() {
-                const quarters = [];
+            function generateMonthOptions() {
+                const months = [];
                 const currentYear = new Date().getFullYear();
-                const quarterMonths = ['Feb', 'May', 'Aug', 'Nov'];
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 for (let year = currentYear - 1; year <= currentYear + 2; year++) {
-                    quarterMonths.forEach(month => {
-                        quarters.push(`${month} ${year}`);
+                    monthNames.forEach(month => {
+                        months.push(`${month} ${year}`);
                     });
                 }
-                quarters.forEach(q => {
+                months.forEach(q => {
                     const option = document.createElement('option');
                     option.value = q;
                     option.textContent = q;
-                    quarterSelect.appendChild(option);
+                    monthSelect.appendChild(option);
                 });
             }
 
             function saveYieldToHistory() {
-                if (!selectedQuarter) {
-                    alert('Please select a quarter before saving yield data');
+                if (!selectedMonth) {
+                    alert('Please select a month before saving yield data');
                     return false;
                 }
-                const existingIndex = historicalData.findIndex(d => d.date === selectedQuarter);
-                const newDataPoint = { date: selectedQuarter };
+                const existingIndex = historicalData.findIndex(d => d.date === selectedMonth);
+                const newDataPoint = { date: selectedMonth };
                 pies.forEach(p => { newDataPoint[p.name] = p.currentYield; });
 
                 if (existingIndex !== -1) {
@@ -744,7 +750,10 @@
                     historicalData.sort((a, b) => {
                         const [monthA, yearA] = a.date.split(' ');
                         const [monthB, yearB] = b.date.split(' ');
-                        const monthOrder = { Feb: 1, May: 2, Aug: 3, Nov: 4 };
+                        const monthOrder = {
+                            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+                            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+                        };
                         if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
                         return monthOrder[monthA] - monthOrder[monthB];
                     });
@@ -753,9 +762,9 @@
             }
 
             saveBtn.addEventListener('click', () => {
-                if (!selectedQuarter) {
-                    alert('Please select a quarter before saving.');
-                    quarterSelect.classList.add('border-red-500');
+                if (!selectedMonth) {
+                    alert('Please select a month before saving.');
+                    monthSelect.classList.add('border-red-500');
                     return;
                 }
 
@@ -819,21 +828,9 @@
                 });
             }
 
-            function initializeNov2025Data() {
-                const hasNov2025 = historicalData.some(d => d.date === 'Nov 2025');
-                if (!hasNov2025) {
-                    const nov2025Data = { date: 'Nov 2025' };
-                    pies.forEach(pie => {
-                        nov2025Data[pie.name] = pie.currentYield;
-                    });
-                    historicalData.push(nov2025Data);
-                }
-            }
-
             // Initial Load
             loadSavedData();
-            initializeNov2025Data();
-            generateQuarterOptions();
+            generateMonthOptions();
             nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
             updateUI();
             setInputsDisabled(true);
