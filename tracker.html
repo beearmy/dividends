@@ -15,6 +15,7 @@
     <meta name="description" content="Track your dividend income and investment portfolio growth with our free, easy-to-use dividend tracker. Visualize your passive income journey and reach your financial goals.">
     <meta name="keywords" content="dividend tracker, dividend income, passive income, investment portfolio, stock dividends, financial goals, dividend investing, income tracker, portfolio tracker">
     <title>My Dividend Tracker</title>
+    <link rel="icon" type="image/png" href="images/app-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -24,7 +25,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <span class="text-white text-xl font-bold">💷 Dividend Tracker</span>
+                    <img src="images/app-icon.png" alt="Dividend Tracker Icon" class="h-8 w-8 mr-2">
+                    <span class="text-white text-xl font-bold">Dividend Tracker</span>
                 </div>
                 <div class="flex items-center">
                     <button onclick="toggleMenu(event)" class="text-slate-300 hover:text-white p-2">
@@ -101,17 +103,27 @@
                             Chart View
                         </button>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="saveData()" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
-                            💾 Save
+                    <div class="relative">
+                        <button onclick="toggleActionsMenu(event)" id="actions-menu-button" class="px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors flex items-center gap-2">
+                            Actions
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
                         </button>
-                        <button onclick="downloadData()" class="px-4 py-2 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors">
-                            📥 Download
-                        </button>
-                        <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2 rounded-lg font-medium bg-purple-600 hover:bg-purple-700 text-white transition-colors">
-                            📤 Import
-                        </button>
-                        <input type="file" id="fileInput" accept=".json" style="display: none" onchange="importData(event)">
+                        <div id="actions-menu" class="hidden absolute top-full right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-40 min-w-[200px]">
+                            <div class="py-2">
+                                <button onclick="saveData()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    💾 Save
+                                </button>
+                                <button onclick="downloadData()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    📥 Download
+                                </button>
+                                <button onclick="document.getElementById('fileInput').click()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    📤 Import
+                                </button>
+                                <input type="file" id="fileInput" accept=".json" style="display: none" onchange="importData(event)">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,25 +154,6 @@
                 <canvas id="myChart" height="100"></canvas>
             </div>
 
-            <!-- Legend -->
-            <div class="mt-6 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
-                <h3 class="font-semibold text-slate-200 mb-3">Color Legend & Instructions</h3>
-                <div class="flex flex-wrap gap-4 mb-3">
-                    <div class="flex items-center gap-2">
-                        <div class="w-16 h-8 bg-amber-900 border-2 border-amber-500 rounded"></div>
-                        <span class="text-sm text-slate-300">Best Month of Year</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-16 h-8 bg-emerald-900 border-2 border-emerald-500 rounded"></div>
-                        <span class="text-sm text-slate-300">Better than Last Year</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-16 h-8 bg-red-900 border-2 border-red-500 rounded"></div>
-                        <span class="text-sm text-slate-300">Worse than Last Year</span>
-                    </div>
-                </div>
-                <p class="text-slate-400 text-sm">💡 <strong>Click any cell</strong> to edit the value. Don't forget to click <strong>Save</strong> to keep your changes!</p>
-            </div>
 
             <!-- Investment Pie Yield Tracker -->
             <div id="yield-tracker-container" class="mt-8">
@@ -207,9 +200,6 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
-                        <p class="text-slate-400 text-sm">💡 How it works: Enter the amount invested in each pie. The blended yield will automatically calculate based on your allocation weights. Yields are tracked quarterly (end of Feb, May, Aug, Nov). Click Save to store your data.</p>
-                    </div>
                 </div>
             </div>
 
@@ -244,6 +234,20 @@
             const hamburger = event.target.closest('nav button');
             
             if (!menu.contains(event.target) && !hamburger && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function toggleActionsMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('actions-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('actions-menu');
+            const button = document.getElementById('actions-menu-button');
+            if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
                 menu.classList.add('hidden');
             }
         });
