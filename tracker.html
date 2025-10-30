@@ -212,6 +212,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Goals Tracker -->
+            <div id="goals-container" class="mt-8">
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
+                    <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white">My Goals</h2>
+                            <p class="text-slate-400 mt-2">Track your financial goals and progress</p>
+                        </div>
+                    </div>
+                    <div id="goals-list" class="space-y-4">
+                        <!-- Goals will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -980,6 +995,105 @@
                 setInputsDisabled(true);
             }
             initializeTracker();
+
+            // --- Goals Tracker ---
+            const goals = [
+                { id: 1, text: '£7.81 = £2344', targetDate: '2023-12-21', completedDate: '2023-12-18', notes: '' },
+                { id: 2, text: '£11.5 = £3516', targetDate: '2024-07-21', completedDate: '2023-12-29', notes: '' },
+                { id: 3, text: '£15.62 = £4688', targetDate: '2024-12-21', completedDate: '2024-03-14', notes: '' },
+                { id: 4, text: '£31.25 = £9375', targetDate: '2025-12-21', completedDate: '2024-04-03', notes: '' },
+                { id: 5, text: '£46.86 = £14063', targetDate: '2026-07-21', completedDate: '2024-12-03', notes: '' },
+                { id: 6, text: '£62.50 = £18750', targetDate: '2026-12-21', completedDate: '2025-03-16', notes: '' },
+                { id: 7, text: '£93.75 = £28125 (+£8000)', targetDate: '2026-04-01', completedDate: '2025-09-04', notes: 'MAGA Monday 07/04/25 (Yield 3.64%) (£19,996)' },
+                { id: 8, text: '£125 = £37500 (+£9375)', targetDate: '2028-07-21', completedDate: null, notes: 'Reassess strategy (more UK dividends? Less Fx fees, other Daily Dividend UK pie) *6.88% in £ 03/05/24* *27.18% in £ 04/0925 (via Snowball)*' },
+                { id: 9, text: '£187.50 = £56250 (+£18750)', targetDate: null, completedDate: null, notes: '' },
+                { id: 10, text: '£250 = £75000 (+£18750)', targetDate: '2030-12-21', completedDate: null, notes: 'Pivot DRIP to mortgage overpayments? £100,000 is tipping point for self-fulfilling FIRE goals @ 5.93% yield. £74,125 is your tipping point at an 8% yield' },
+                { id: 11, text: '£375 = £112500 (+£37500)', targetDate: null, completedDate: null, notes: 'Overtime 8 hour shift = £300\nAssets protected on T212 for £85k' },
+                { id: 12, text: '£500 = £150000 (+£37500)', targetDate: '2032-12-21', completedDate: null, notes: '' },
+                { id: 13, text: 'Overtime 13 hour shift = £500', targetDate: null, completedDate: null, notes: 'Reassess UK Top £ payers & high risk pie. Start withdrawal from Almost Daily Dividends but smooth out the monthly incomes' },
+                { id: 14, text: 'Overtime 16 hour shift = £600', targetDate: null, completedDate: null, notes: 'Reassess strategy (property?) (growth dividends?)' },
+            ].reverse();
+
+            const goalsList = document.getElementById('goals-list');
+
+            function calculateDateDifference(date1, date2) {
+                const d1 = new Date(date1);
+                const d2 = new Date(date2);
+                if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+                    return { days: 0, months: 0, years: 0, totalDays: 0, isEarly: false };
+                }
+
+                const isEarly = d1 < d2;
+                const diffTime = Math.abs(d2 - d1);
+                const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let years = Math.floor(totalDays / 365);
+                let months = Math.floor((totalDays % 365) / 30);
+                let days = totalDays % 30;
+
+                return { days, months, years, totalDays, isEarly };
+            }
+
+            function formatDifference(diff) {
+                if (diff.totalDays === 0) return '';
+                const parts = [];
+                if (diff.years > 0) parts.push(`${diff.years} year${diff.years > 1 ? 's' : ''}`);
+                if (diff.months > 0) parts.push(`${diff.months} month${diff.months > 1 ? 's' : ''}`);
+                if (diff.days > 0) parts.push(`${diff.days} day${diff.days > 1 ? 's' : ''}`);
+                return parts.join(', ');
+            }
+
+            goals.forEach(goal => {
+                const goalEl = document.createElement('div');
+                goalEl.className = 'goal-item bg-slate-900/50 border border-slate-700 rounded-lg p-4 transition-all duration-300';
+
+                const isCompleted = goal.completedDate !== null;
+                const completionStatus = isCompleted
+                    ? calculateDateDifference(goal.completedDate, goal.targetDate)
+                    : calculateDateDifference(new Date().toISOString().split('T')[0], goal.targetDate);
+
+                let statusText = '';
+                if(isCompleted) {
+                    if (completionStatus.isEarly) {
+                        statusText = `Completed ${formatDifference(completionStatus)} ahead of schedule.`;
+                    } else {
+                        statusText = `Completed ${formatDifference(completionStatus)} behind schedule.`;
+                    }
+                } else if (goal.targetDate) {
+                    statusText = `${formatDifference(completionStatus)} left to complete.`;
+                }
+
+                goalEl.innerHTML = `
+                    <div class="flex items-start">
+                        <input id="goal-${goal.id}" type="checkbox" class="h-6 w-6 rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-600 cursor-pointer mt-1" ${isCompleted ? 'checked' : ''}>
+                        <div class="ml-4 flex-1">
+                            <label for="goal-${goal.id}" class="text-lg font-medium text-slate-200 cursor-pointer">#${goal.id} ${goal.text}</label>
+                            <div class="text-sm text-slate-400 mt-1">
+                                ${goal.targetDate ? `<strong>Target:</strong> ${new Date(goal.targetDate).toLocaleDateString()}` : ''}
+                                ${isCompleted ? `<strong class="ml-2">Completed:</strong> ${new Date(goal.completedDate).toLocaleDateString()}` : ''}
+                            </div>
+                            <p class="status-text text-xs mt-2 font-semibold ${isCompleted ? (completionStatus.isEarly ? 'text-emerald-400' : 'text-amber-400') : 'text-blue-400'}">${statusText}</p>
+                            ${goal.notes ? `<p class="notes text-xs text-slate-500 mt-2 whitespace-pre-line">${goal.notes}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                goalsList.appendChild(goalEl);
+
+                const checkbox = goalEl.querySelector(`#goal-${goal.id}`);
+                const label = goalEl.querySelector('label');
+
+                function updateAppearance() {
+                    if (checkbox.checked) {
+                        label.classList.add('line-through', 'text-slate-500');
+                    } else {
+                        label.classList.remove('line-through', 'text-slate-500');
+                    }
+                }
+
+                checkbox.addEventListener('change', updateAppearance);
+                updateAppearance();
+            });
         });
     </script>
 </body>
