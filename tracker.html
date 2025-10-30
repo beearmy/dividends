@@ -1021,7 +1021,7 @@
                 { id: 12, text: '£500 = £150000 (+£37500)', targetDate: '2032-12-21', completedDate: null, notes: '' },
                 { id: 13, text: 'Overtime 13 hour shift = £500', targetDate: null, completedDate: null, notes: 'Reassess UK Top £ payers & high risk pie. Start withdrawal from Almost Daily Dividends but smooth out the monthly incomes' },
                 { id: 14, text: 'Overtime 16 hour shift = £600', targetDate: null, completedDate: null, notes: 'Reassess strategy (property?) (growth dividends?)' },
-            ].reverse();
+            ];
 
             const goalsList = document.getElementById('goals-list');
 
@@ -1107,6 +1107,8 @@
                 goalsList.innerHTML = '';
                 const activeGoals = goals.filter(g => g.completedDate === null);
                 const completedGoals = goals.filter(g => g.completedDate !== null);
+
+                activeGoals.sort((a, b) => a.id - b.id);
 
                 activeGoals.forEach(goal => {
                     goalsList.appendChild(renderGoal(goal));
