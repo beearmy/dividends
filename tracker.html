@@ -775,6 +775,32 @@
                 return true;
             }
 
+            async function saveDataToBackend() {
+                try {
+                    const piePayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pies)
+                    };
+                    await fetch('/api/pieAllocations', piePayload);
+
+                    if (saveYieldToHistory()) {
+                        const historyPayload = {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(historicalData)
+                        };
+                        await fetch('/api/yieldHistory', historyPayload);
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Error saving data:', error);
+                    alert('❌ Error saving data.');
+                    return false;
+                }
+            }
+
             saveBtn.addEventListener('click', async () => {
                 if (!selectedMonth) {
                     alert('Please select a month before saving.');
@@ -782,52 +808,41 @@
                     return;
                 }
 
-                try {
-                    await fetch('/api/pieAllocations', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(pies)
-                    });
-
-                    if (saveYieldToHistory()) {
-                        await fetch('/api/yieldHistory', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(historicalData)
-                        });
-                    }
-
+                const success = await saveDataToBackend();
+                if (success) {
                     hasUnsavedChanges = false;
                     updateUI();
 
-                    const originalText = '💾 Save Changes';
+                    const originalText = saveBtn.textContent;
                     saveBtn.textContent = '✓ Saved!';
+                    saveBtn.classList.add('bg-green-600');
                     setTimeout(() => {
                         saveBtn.textContent = originalText;
+                        saveBtn.classList.remove('bg-green-600');
                         updateSaveButton();
                     }, 2000);
-                } catch (error) {
-                    console.error('Error saving data:', error);
-                    alert('❌ Error saving data.');
                 }
             });
 
             async function loadSavedData() {
                 try {
-                    const pieResponse = await fetch('/api/pieAllocations');
-                    const pieResult = await pieResponse.json();
-                    if (pieResult.data) {
-                        pies = pieResult.data;
+                    const [pieResponse, historyResponse] = await Promise.all([
+                        fetch('/api/pieAllocations'),
+                        fetch('/api/yieldHistory')
+                    ]);
+
+                    if (pieResponse.ok) {
+                        const pieResult = await pieResponse.json();
+                        if (pieResult.data) {
+                            pies = pieResult.data;
+                        }
                     }
 
-                    const historyResponse = await fetch('/api/yieldHistory');
-                    const historyResult = await historyResponse.json();
-                    if (historyResult.data) {
-                        historicalData = historyResult.data;
+                    if (historyResponse.ok) {
+                        const historyResult = await historyResponse.json();
+                        if (historyResult.data) {
+                            historicalData = historyResult.data;
+                        }
                     }
                 } catch (error) {
                     console.error('Error loading saved data:', error);
