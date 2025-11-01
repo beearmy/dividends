@@ -590,9 +590,7 @@
 
             let historicalData = [
                 { date: 'Oct 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
-                { date: 'Nov 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null },
-                { date: 'Dec 2025', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null },
-                { date: 'Jan 2026', 'Income Factory': null, 'Low Risk': null, 'Medium Risk': null, 'High Risk': null, 'Top UK Payers': null }
+                { date: 'Nov 2025', 'Income Factory': 10.8, 'Low Risk': 4.5, 'Medium Risk': 3.1, 'High Risk': 22.5, 'Top UK Payers': 8.3 }
             ];
 
             let selectedMonth = '';
@@ -901,15 +899,19 @@
                     const hasAnyYield = pies.some(pie => dataPoint[pie.name] != null);
                     if (!hasAnyYield) {
                         return null;
-    }
+                    }
 
                     return (weightedYield / totalAllocation).toFixed(2);
                 });
 
-                const oct2025Index = historicalData.findIndex(d => d.date === 'Oct 2025');
+                // Find the last month that has ANY yield data.
+                const lastDataPointIndex = historicalData.findLastIndex(dataPoint =>
+                    pies.some(pie => dataPoint[pie.name] != null)
+                );
 
-                if (oct2025Index !== -1) {
-                    blendedYieldData[oct2025Index] = calculateBlendedYield();
+                // Update the blended yield for the most recent month with the current live calculation
+                if (lastDataPointIndex !== -1) {
+                    blendedYieldData[lastDataPointIndex] = calculateBlendedYield();
                 }
 
                 const datasets = pies.map(pie => ({
@@ -928,7 +930,7 @@
                         if (totalAllocation === 0) return 0;
                         const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
                         return (weightedYield / totalAllocation);
-    }
+                    }
                     const weightedYield = pies.reduce((sum, pie) => {
                         return sum + (pie.currentYield * (pie.targetAllocation || 0));
                     }, 0);
@@ -937,12 +939,12 @@
 
                 const predictedYield = calculatePredictedBlendedYield().toFixed(2);
 
-                const lastHistoricalIndex = historicalData.map(d => d.date).indexOf('Oct 2025');
+                const lastHistoricalIndex = lastDataPointIndex;
                 const blendedYieldWithPrediction = [...blendedYieldData];
 
-                if (lastHistoricalIndex !== -1) {
+                // Predict for the next month if it exists in the array
+                if (lastHistoricalIndex !== -1 && lastHistoricalIndex < blendedYieldWithPrediction.length - 1) {
                     blendedYieldWithPrediction[lastHistoricalIndex + 1] = predictedYield;
-                    blendedYieldWithPrediction[lastHistoricalIndex + 2] = predictedYield;
                 }
 
                 datasets.push({
@@ -955,14 +957,14 @@
                     segment: {
                         borderColor: ctx => {
                             const index = ctx.p0DataIndex;
-                            if (index >= lastHistoricalIndex +1) {
+                            if (lastHistoricalIndex !== -1 && index >= lastHistoricalIndex) {
                                 return 'rgba(255, 255, 255, 0.5)';
                             }
                             return '#ffffff';
                         },
                         borderDash: ctx => {
                             const index = ctx.p0DataIndex;
-                            if (index >= lastHistoricalIndex + 1) {
+                            if (lastHistoricalIndex !== -1 && index >= lastHistoricalIndex) {
                                 return [5, 5];
                             }
                             return undefined;
@@ -995,9 +997,45 @@
                 });
             }
 
+            function ensureNextMonthDataPoint() {
+                if (historicalData.length === 0) {
+                    return;
+                }
+
+                const lastEntry = historicalData[historicalData.length - 1];
+                const [lastMonthStr, lastYearStr] = lastEntry.date.split(' ');
+                const lastYear = parseInt(lastYearStr);
+
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const lastMonthIndex = monthNames.indexOf(lastMonthStr);
+
+                let nextMonthIndex = lastMonthIndex + 1;
+                let nextYear = lastYear;
+
+                if (nextMonthIndex > 11) {
+                    nextMonthIndex = 0; // January
+                    nextYear++;
+                }
+
+                const nextMonthStr = monthNames[nextMonthIndex];
+                const nextDate = `${nextMonthStr} ${nextYear}`;
+
+                const nextMonthExists = historicalData.some(d => d.date === nextDate);
+
+                if (!nextMonthExists) {
+                    const newEntry = { date: nextDate };
+                    pies.forEach(pie => {
+                        newEntry[pie.name] = null;
+                    });
+                    historicalData.push(newEntry);
+                }
+            }
+
+
             // Initial Load
             async function initializeTracker() {
                 await loadSavedData();
+                ensureNextMonthDataPoint();
                 generateMonthOptions();
                 nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
                 updateUI();
