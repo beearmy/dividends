@@ -8,6 +8,14 @@
     {
       "src": "*.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "images/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "site.webmanifest",
+      "use": "@vercel/static"
     }
   ],
   "rewrites": [
