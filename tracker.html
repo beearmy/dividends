@@ -798,9 +798,6 @@
 
                 for (let year = currentYear; year <= currentYear + 2; year++) {
                     monthNames.forEach((month, index) => {
-                        if (year === currentYear && index < currentMonth) {
-                            return;
-                        }
                         months.push(`${month} ${year}`);
                     });
                 }
@@ -897,15 +894,16 @@
                     if (pieResponse.ok) {
                         const pieResult = await pieResponse.json();
                         if (pieResult.data) {
-                            pies = pieResult.data;
+                            pies = typeof pieResult.data === 'string' ? JSON.parse(pieResult.data) : pieResult.data;
                         }
                     }
 
                     if (historyResponse.ok) {
                         const historyResult = await historyResponse.json();
                         if (historyResult.data) {
+                            const parsedData = typeof historyResult.data === 'string' ? JSON.parse(historyResult.data) : historyResult.data;
                             // Correct the dates
-                            const correctedData = historyResult.data.map(item => {
+                            const correctedData = parsedData.map(item => {
                                 if (item.date === 'Oct 2025') {
                                     return { ...item, date: 'Sep 2025' };
                                 }
@@ -1166,9 +1164,9 @@
 
                 goalEl.innerHTML = `
                     <div class="flex items-start">
-                        <input id="goal-${goal.id}" type="checkbox" class="h-6 w-6 rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-600 cursor-pointer mt-1" ${isCompleted ? 'checked' : ''}>
+                        <input id="goal-${goal.id}" data-goal-id="${goal.id}" type="checkbox" class="goal-checkbox h-6 w-6 rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-600 cursor-pointer mt-1" ${isCompleted ? 'checked' : ''}>
                         <div class="ml-4 flex-1">
-                            <label for="goal-${goal.id}" class="text-lg font-medium text-slate-200 cursor-pointer">#${goal.id} ${goal.text}</label>
+                            <label for="goal-${goal.id}" class="text-lg font-medium text-slate-200 cursor-pointer ${isCompleted ? 'line-through text-slate-500' : ''}">#${goal.id} ${goal.text}</label>
                             <div class="text-sm text-slate-400 mt-1">
                                 ${goal.targetDate ? `<strong>Target:</strong> ${new Date(goal.targetDate).toLocaleDateString()}` : ''}
                                 ${isCompleted ? `<strong class="ml-2">Completed:</strong> ${new Date(goal.completedDate).toLocaleDateString()}` : ''}
@@ -1178,20 +1176,6 @@
                         </div>
                     </div>
                 `;
-
-                const checkbox = goalEl.querySelector(`#goal-${goal.id}`);
-                const label = goalEl.querySelector('label');
-
-                function updateAppearance() {
-                    if (checkbox.checked) {
-                        label.classList.add('line-through', 'text-slate-500');
-                    } else {
-                        label.classList.remove('line-through', 'text-slate-500');
-                    }
-                }
-
-                checkbox.addEventListener('change', updateAppearance);
-                updateAppearance();
                 return goalEl;
             }
 
@@ -1224,6 +1208,8 @@
                     const completedContainer = document.createElement('div');
                     completedContainer.className = 'p-4 space-y-4 border-t border-slate-700';
 
+                    completedGoals.sort((a,b) => new Date(b.completedDate) - new Date(a.completedDate));
+
                     completedGoals.forEach(goal => {
                         completedContainer.appendChild(renderGoal(goal));
                     });
@@ -1233,6 +1219,17 @@
                     goalsList.appendChild(details);
                 }
             }
+
+            goalsList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('goal-checkbox')) {
+                    const goalId = parseInt(e.target.dataset.goalId);
+                    const goal = goals.find(g => g.id === goalId);
+                    if (goal) {
+                        goal.completedDate = e.target.checked ? new Date().toISOString().split('T')[0] : null;
+                        renderGoals();
+                    }
+                }
+            });
 
             renderGoals();
         });
