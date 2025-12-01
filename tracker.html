@@ -798,9 +798,6 @@
 
                 for (let year = currentYear; year <= currentYear + 2; year++) {
                     monthNames.forEach((month, index) => {
-                        if (year === currentYear && index < currentMonth) {
-                            return;
-                        }
                         months.push(`${month} ${year}`);
                     });
                 }
@@ -897,7 +894,7 @@
                     if (pieResponse.ok) {
                         const pieResult = await pieResponse.json();
                         if (pieResult.data) {
-                            pies = pieResult.data;
+                            pies = typeof pieResult.data === 'string' ? JSON.parse(pieResult.data) : pieResult.data;
                         }
                     }
 
