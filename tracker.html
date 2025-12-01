@@ -901,28 +901,16 @@
                     if (historyResponse.ok) {
                         const historyResult = await historyResponse.json();
                         if (historyResult.data) {
-                            const parsedData = typeof historyResult.data === 'string' ? JSON.parse(historyResult.data) : historyResult.data;
-                            // Correct the dates
-                            const correctedData = parsedData.map(item => {
-                                if (item.date === 'Oct 2025') {
-                                    return { ...item, date: 'Sep 2025' };
-                                }
-                                if (item.date === 'Nov 2025') {
-                                    return { ...item, date: 'Oct 2025' };
-                                }
-                                return item;
-                            });
-
                             // Sort the data to ensure chronological order
                             const monthOrder = { 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12 };
-                            correctedData.sort((a, b) => {
+                            historyResult.data.sort((a, b) => {
                                 const [monthA, yearA] = a.date.split(' ');
                                 const [monthB, yearB] = b.date.split(' ');
                                 if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
                                 return monthOrder[monthA] - monthOrder[monthB];
                             });
 
-                            historicalData = correctedData;
+                            historicalData = historyResult.data;
                         }
                     }
                 } catch (error) {
