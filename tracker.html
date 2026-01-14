@@ -698,26 +698,43 @@
                 renderYieldChart();
             }
 
-            // Render the editable yield input grid - NEWEST months first, scrollable
+            // Render the editable yield input grid - NEWEST months first, scrollable, hide empty months
             function renderYieldInputGrid() {
                 const gridContainer = document.getElementById('yield-input-grid');
                 if (!gridContainer) return;
 
-                // Reverse the data to show newest months first
-                const reversedData = [...historicalData].reverse();
+                // Filter historical data: keep months with data + one "next" month placeholder
+                const lastMonthWithDataIndex = historicalData.findLastIndex(d => 
+                    pies.some(pie => d[pie.name] != null)
+                );
+                
+                // Filter to only show: months with data + the next empty month (if exists)
+                const filteredData = historicalData.filter((d, i) => {
+                    const hasData = pies.some(pie => d[pie.name] != null);
+                    const isNextMonth = i === lastMonthWithDataIndex + 1;
+                    return hasData || isNextMonth;
+                });
+
+                // If no data at all, show just the first month as placeholder
+                if (filteredData.length === 0 && historicalData.length > 0) {
+                    filteredData.push(historicalData[0]);
+                }
+
+                // Reverse to show newest first
+                const reversedData = [...filteredData].reverse();
 
                 // Build a table with months as columns (newest first) and pies as rows
                 let html = `
-                    <div class="relative">
-                        <table class="w-full text-sm border-separate border-spacing-0">
+                    <div class="overflow-x-auto max-w-full" style="max-height: 400px;">
+                        <table class="text-sm border-separate border-spacing-0" style="min-width: max-content;">
                             <thead>
                                 <tr class="bg-slate-700/50">
-                                    <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700 z-10 min-w-[120px]">Pie</th>
+                                    <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700 z-20 min-w-[110px]">Pie</th>
                                     ${reversedData.map((d, i) => {
-                                        // Check if this is the "next" month (first in reversed = last in original)
-                                        const originalIndex = historicalData.length - 1 - i;
-                                        const isNextMonth = originalIndex === historicalData.length - 1 && !pies.some(pie => d[pie.name] != null);
-                                        return `<th class="p-2 text-center text-slate-300 font-medium min-w-[85px] ${isNextMonth ? 'bg-emerald-900/30' : ''}">${d.date}${isNextMonth ? '<br><span class="text-xs text-emerald-400 font-normal">(next)</span>' : ''}</th>`;
+                                        // Check if this is the "next" month (empty placeholder)
+                                        const isNextMonth = !pies.some(pie => d[pie.name] != null);
+                                        const originalIndex = historicalData.findIndex(h => h.date === d.date);
+                                        return `<th class="p-2 text-center text-slate-300 font-medium min-w-[80px] whitespace-nowrap ${isNextMonth ? 'bg-emerald-900/30' : ''}">${d.date}${isNextMonth ? '<br><span class="text-xs text-emerald-400 font-normal">(next)</span>' : ''}</th>`;
                                     }).join('')}
                                 </tr>
                             </thead>
@@ -734,10 +751,10 @@
                                 </div>
                             </td>
                             ${reversedData.map((d, i) => {
-                                const originalIndex = historicalData.length - 1 - i;
+                                const originalIndex = historicalData.findIndex(h => h.date === d.date);
                                 const yieldValue = d[pie.name];
                                 const hasValue = yieldValue !== null && yieldValue !== undefined;
-                                const isNextMonth = originalIndex === historicalData.length - 1 && !pies.some(p => historicalData[originalIndex][p.name] != null);
+                                const isNextMonth = !pies.some(p => d[p.name] != null);
                                 return `
                                     <td class="p-1 ${isNextMonth ? 'bg-emerald-900/20' : ''}">
                                         <input 
@@ -781,6 +798,7 @@
                     </tbody>
                 </table>
                 </div>
+                ${reversedData.length > 4 ? '<p class="text-xs text-slate-500 mt-2 text-right">← Scroll for older months</p>' : ''}
                 `;
 
                 gridContainer.innerHTML = html;
@@ -815,12 +833,10 @@
                 // Update the historical data
                 historicalData[monthIndex][pieName] = newValue;
                 
-                // Also update the pie's currentYield if this is the most recent month with data
-                const lastMonthWithData = historicalData.findLastIndex(d => 
-                    pies.some(pie => d[pie.name] != null)
-                );
-                if (monthIndex === lastMonthWithData && newValue !== null) {
-                    pies[pieIndex].currentYield = newValue;
+                // Update the pie's currentYield to the most recent month's value for this pie
+                const lastMonthWithThisPieData = historicalData.findLastIndex(d => d[pieName] != null);
+                if (lastMonthWithThisPieData !== -1) {
+                    pies[pieIndex].currentYield = historicalData[lastMonthWithThisPieData][pieName];
                 }
                 
                 // Show saving status
@@ -837,7 +853,7 @@
                     };
                     await fetch('/api/yieldHistory', historyPayload);
                     
-                    // Also save pie allocations if currentYield was updated
+                    // Also save pie allocations with updated currentYield
                     const piePayload = {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -848,16 +864,14 @@
                     statusEl.textContent = '✓ Saved';
                     statusEl.className = 'text-sm text-emerald-400';
                     
-                    // Ensure next month exists and update chart
+                    // Ensure next month exists
                     ensureNextMonthDataPoint();
-                    renderYieldChart();
-                    updateCalculatedDisplays();
                     
-                    // Re-render grid to show new next month if added
-                    const gridNeedsUpdate = historicalData.length !== document.querySelectorAll('.yield-grid-input[data-pie-index="0"]').length;
-                    if (gridNeedsUpdate) {
-                        renderYieldInputGrid();
-                    }
+                    // Re-render everything to reflect changes
+                    renderYieldInputGrid();
+                    renderYieldChart();
+                    renderPieCards();
+                    updateCalculatedDisplays();
                     
                     setTimeout(() => {
                         statusEl.textContent = '';
