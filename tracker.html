@@ -81,23 +81,23 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
                     <p class="text-slate-400 text-sm">All Time Total</p>
-                    <p class="text-2xl font-bold text-white">£1,338.22</p>
+                    <p id="all-time-total" class="text-2xl font-bold text-white">£0.00</p>
                 </div>
                 
                 <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
                     <p class="text-slate-400 text-sm">Best Month Ever</p>
-                    <p class="text-2xl font-bold text-amber-400">£117.14</p>
-                    <p class="text-xs text-slate-500">Sep 2025</p>
+                    <p id="best-month-value" class="text-2xl font-bold text-amber-400">£0.00</p>
+                    <p id="best-month-date" class="text-xs text-slate-500">-</p>
                 </div>
 
                 <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
-                    <p class="text-slate-400 text-sm">2025 Avg/Month</p>
-                    <p class="text-2xl font-bold text-emerald-400">£56.31</p>
+                    <p id="avg-month-label" class="text-slate-400 text-sm">2026 Avg/Month</p>
+                    <p id="avg-month-value" class="text-2xl font-bold text-emerald-400">£0.00</p>
                 </div>
 
                 <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
                     <p class="text-slate-400 text-sm">YoY Growth</p>
-                    <p class="text-2xl font-bold text-blue-400">+151.2%</p>
+                    <p id="yoy-growth" class="text-2xl font-bold text-blue-400">-</p>
                 </div>
             </div>
 
@@ -397,10 +397,63 @@
             const currentYear = new Date().getFullYear().toString();
             const ytdTotal = data[currentYear] ? Object.values(data[currentYear]).reduce((sum, val) => sum + (val || 0), 0) : 0;
             document.getElementById('ytd-total').textContent = `£${ytdTotal.toFixed(2)}`;
-            // Update label
+            
+            // Update YTD label
             const ytdLabel = document.getElementById('ytd-label');
             if (ytdLabel) {
                 ytdLabel.textContent = `${currentYear} YTD`;
+            }
+
+            // Calculate All Time Total
+            let allTimeTotal = 0;
+            Object.keys(data).forEach(year => {
+                Object.values(data[year]).forEach(val => {
+                    allTimeTotal += (val || 0);
+                });
+            });
+            document.getElementById('all-time-total').textContent = `£${allTimeTotal.toFixed(2)}`;
+
+            // Find Best Month Ever
+            let bestMonthValue = 0;
+            let bestMonthDate = '';
+            Object.keys(data).forEach(year => {
+                Object.keys(data[year]).forEach(month => {
+                    const value = data[year][month];
+                    if (value && value > bestMonthValue) {
+                        bestMonthValue = value;
+                        bestMonthDate = `${month} ${year}`;
+                    }
+                });
+            });
+            document.getElementById('best-month-value').textContent = `£${bestMonthValue.toFixed(2)}`;
+            document.getElementById('best-month-date').textContent = bestMonthDate || '-';
+
+            // Calculate Current Year Average per Month
+            const currentYearValues = data[currentYear] ? Object.values(data[currentYear]).filter(v => v !== null) : [];
+            const currentYearAvg = currentYearValues.length > 0 
+                ? currentYearValues.reduce((sum, val) => sum + val, 0) / currentYearValues.length 
+                : 0;
+            document.getElementById('avg-month-label').textContent = `${currentYear} Avg/Month`;
+            document.getElementById('avg-month-value').textContent = `£${currentYearAvg.toFixed(2)}`;
+
+            // Calculate YoY Growth (current year vs previous year)
+            const prevYear = (parseInt(currentYear) - 1).toString();
+            if (data[prevYear] && data[currentYear]) {
+                const currentYearTotal = Object.values(data[currentYear]).reduce((sum, val) => sum + (val || 0), 0);
+                const prevYearTotal = Object.values(data[prevYear]).reduce((sum, val) => sum + (val || 0), 0);
+                
+                if (prevYearTotal > 0) {
+                    const growthPercent = ((currentYearTotal - prevYearTotal) / prevYearTotal) * 100;
+                    const growthSign = growthPercent >= 0 ? '+' : '';
+                    const growthColor = growthPercent >= 0 ? 'text-blue-400' : 'text-red-400';
+                    const yoyElement = document.getElementById('yoy-growth');
+                    yoyElement.textContent = `${growthSign}${growthPercent.toFixed(1)}%`;
+                    yoyElement.className = `text-2xl font-bold ${growthColor}`;
+                } else {
+                    document.getElementById('yoy-growth').textContent = '-';
+                }
+            } else {
+                document.getElementById('yoy-growth').textContent = '-';
             }
         }
 
