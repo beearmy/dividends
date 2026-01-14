@@ -178,17 +178,6 @@
                     </div>
                 </summary>
                 <div class="p-6">
-                    <div class="flex flex-wrap gap-4 items-center justify-between mb-6 bg-slate-800 border border-slate-700 rounded-lg p-4">
-                        <div class="flex items-center gap-4">
-                            <select id="month-select" class="px-4 py-3 rounded-lg font-semibold bg-slate-700 text-white border border-slate-600 focus:border-emerald-500 focus:outline-none">
-                                <option value="">Select Month for Yield Update</option>
-                            </select>
-                        </div>
-                        <button id="save-yield-btn" class="px-6 py-3 rounded-lg font-semibold transition-all bg-slate-700 text-slate-400 cursor-default">
-                            💾 Save Changes
-                        </button>
-                    </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                         <div class="bg-slate-900/50 border border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-center">
                              <h3 class="text-slate-400 text-lg mb-2">Total Blended Current Yield</h3>
@@ -205,7 +194,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <div>
                                 <h3 class="font-semibold text-slate-200">Yield Trends Over Time</h3>
-                                <p id="next-update" class="text-sm text-slate-400">Next Update: </p>
+                                <p class="text-xs text-slate-500">Edit yields directly in the grid below • Auto-saves on change</p>
                             </div>
                             <div id="yield-save-status" class="text-sm text-slate-400"></div>
                         </div>
@@ -604,33 +593,11 @@
                 { date: 'Oct 2025', 'Income Factory': 10.8, 'Low Risk': 4.5, 'Medium Risk': 3.1, 'High Risk': 22.5, 'Top UK Payers': 8.3 }
             ];
 
-            let selectedMonth = '';
-            let hasUnsavedChanges = false;
             let yieldChart = null;
 
             const blendedYieldEl = document.getElementById('blended-yield');
             const totalAllocationEl = document.getElementById('total-allocation');
             const pieCardsContainer = document.getElementById('pie-cards-container');
-            const monthSelect = document.getElementById('month-select');
-            const saveBtn = document.getElementById('save-yield-btn');
-            const nextUpdateEl = document.getElementById('next-update');
-
-            function getNextUpdate() {
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-                let nextMonth = currentMonth + 1;
-                let nextYear = currentYear;
-
-                if (nextMonth > 11) {
-                    nextMonth = 0; // January
-                    nextYear++;
-                }
-
-                return `${monthNames[nextMonth]} ${nextYear}`;
-            }
 
             function calculateBlendedYield() {
                 const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
@@ -664,32 +631,29 @@
                 sortedPies.forEach(pie => {
                     const originalIndex = pies.findIndex(p => p.name === pie.name);
                     const card = document.createElement('div');
-                    card.className = "bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 hover:border-slate-600 transition-all";
+                    card.className = "bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700 hover:border-slate-600 transition-all";
 
                     const allocationPercent = totalAllocation > 0 ? ((pie.allocation / totalAllocation) * 100).toFixed(1) : 0;
                     const status = getAllocationStatus(allocationPercent, pie.targetAllocation);
 
                     card.innerHTML = `
-                        <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center">
-                                <div class="w-4 h-4 rounded-full mr-3" style="background-color: ${pie.color};"></div>
-                                <h4 class="font-semibold text-white">${pie.name}</h4>
+                                <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${pie.color};"></div>
+                                <h4 class="font-semibold text-white text-sm">${pie.name}</h4>
                             </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="text-xs text-slate-400 block mb-1">Current Yield (%)</label>
-                            <input type="number" value="${pie.currentYield || ''}" step="0.01" class="yield-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-2xl font-bold border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
+                            <span class="text-lg font-bold text-emerald-400">${pie.currentYield ? pie.currentYield.toFixed(2) : '0.00'}%</span>
                         </div>
                         <div class="mb-2">
                             <label class="text-xs text-slate-400 block mb-1">Investment (£)</label>
-                            <input type="number" value="${pie.allocation || ''}" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
+                            <input type="number" value="${pie.allocation || ''}" placeholder="0" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
                         </div>
                         ${pie.allocation > 0 ? `
-                            <div class="flex justify-between items-center mt-3 text-xs">
+                            <div class="flex justify-between items-center mt-2 text-xs">
                                 <span class="text-slate-400">${allocationPercent}% of portfolio</span>
                                 <div class="flex items-center gap-2">
-                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-16 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none" step="0.1" data-index="${originalIndex}">
-                                     <span class="px-2 py-1 rounded font-medium ${status.color} text-white">${status.text}</span>
+                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-14 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs" step="0.1" data-index="${originalIndex}">
+                                     <span class="px-2 py-1 rounded font-medium ${status.color} text-white text-xs">${status.text}</span>
                                 </div>
                             </div>
                         ` : ''}
@@ -730,54 +694,60 @@
             function updateUI() {
                 updateCalculatedDisplays();
                 renderPieCards();
-                updateSaveButton();
                 renderYieldInputGrid();
                 renderYieldChart();
             }
 
-            // Render the editable yield input grid
+            // Render the editable yield input grid - NEWEST months first, scrollable
             function renderYieldInputGrid() {
                 const gridContainer = document.getElementById('yield-input-grid');
                 if (!gridContainer) return;
 
-                // Build a table with months as columns and pies as rows
+                // Reverse the data to show newest months first
+                const reversedData = [...historicalData].reverse();
+
+                // Build a table with months as columns (newest first) and pies as rows
                 let html = `
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-slate-700/50">
-                                <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700/50">Pie</th>
-                                ${historicalData.map((d, i) => {
-                                    const isNextMonth = i === historicalData.length - 1 && !pies.some(pie => d[pie.name] != null);
-                                    return `<th class="p-2 text-center text-slate-300 font-medium min-w-[80px] ${isNextMonth ? 'bg-slate-600/30' : ''}">${d.date}${isNextMonth ? ' <span class="text-xs text-emerald-400">(next)</span>' : ''}</th>`;
-                                }).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
+                    <div class="relative">
+                        <table class="w-full text-sm border-separate border-spacing-0">
+                            <thead>
+                                <tr class="bg-slate-700/50">
+                                    <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700 z-10 min-w-[120px]">Pie</th>
+                                    ${reversedData.map((d, i) => {
+                                        // Check if this is the "next" month (first in reversed = last in original)
+                                        const originalIndex = historicalData.length - 1 - i;
+                                        const isNextMonth = originalIndex === historicalData.length - 1 && !pies.some(pie => d[pie.name] != null);
+                                        return `<th class="p-2 text-center text-slate-300 font-medium min-w-[85px] ${isNextMonth ? 'bg-emerald-900/30' : ''}">${d.date}${isNextMonth ? '<br><span class="text-xs text-emerald-400 font-normal">(next)</span>' : ''}</th>`;
+                                    }).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
                 `;
 
                 pies.forEach((pie, pieIndex) => {
                     html += `
                         <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                            <td class="p-2 font-medium text-slate-200 sticky left-0 bg-slate-800">
+                            <td class="p-2 font-medium text-slate-200 sticky left-0 bg-slate-800 z-10">
                                 <div class="flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full" style="background-color: ${pie.color};"></div>
-                                    <span class="truncate">${pie.name}</span>
+                                    <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${pie.color};"></div>
+                                    <span class="truncate text-xs">${pie.name}</span>
                                 </div>
                             </td>
-                            ${historicalData.map((d, monthIndex) => {
+                            ${reversedData.map((d, i) => {
+                                const originalIndex = historicalData.length - 1 - i;
                                 const yieldValue = d[pie.name];
                                 const hasValue = yieldValue !== null && yieldValue !== undefined;
-                                const isNextMonth = monthIndex === historicalData.length - 1 && !pies.some(p => d[p.name] != null);
+                                const isNextMonth = originalIndex === historicalData.length - 1 && !pies.some(p => historicalData[originalIndex][p.name] != null);
                                 return `
-                                    <td class="p-1 ${isNextMonth ? 'bg-slate-600/20' : ''}">
+                                    <td class="p-1 ${isNextMonth ? 'bg-emerald-900/20' : ''}">
                                         <input 
                                             type="number" 
                                             step="0.01" 
                                             value="${hasValue ? yieldValue : ''}" 
                                             placeholder="-"
-                                            class="yield-grid-input w-full px-2 py-1 text-center bg-slate-700/50 text-white rounded border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs ${isNextMonth ? 'border-emerald-600/50' : ''}"
+                                            class="yield-grid-input w-full px-2 py-1.5 text-center bg-slate-700/50 text-white rounded border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs ${isNextMonth ? 'border-emerald-600/50 bg-emerald-900/30' : ''}"
                                             data-pie-index="${pieIndex}"
-                                            data-month-index="${monthIndex}"
+                                            data-month-index="${originalIndex}"
                                             data-date="${d.date}"
                                         >
                                     </td>
@@ -790,8 +760,8 @@
                 // Add blended yield row
                 html += `
                         <tr class="border-t-2 border-slate-600 bg-slate-700/30">
-                            <td class="p-2 font-bold text-white sticky left-0 bg-slate-700">Blended Yield</td>
-                            ${historicalData.map((d, monthIndex) => {
+                            <td class="p-2 font-bold text-white sticky left-0 bg-slate-700 z-10 text-xs">Blended</td>
+                            ${reversedData.map((d, i) => {
                                 const hasAnyYield = pies.some(pie => d[pie.name] != null);
                                 let blendedYield = '-';
                                 if (hasAnyYield) {
@@ -805,11 +775,12 @@
                                         blendedYield = (weightedYield / totalAllocation).toFixed(2) + '%';
                                     }
                                 }
-                                return `<td class="p-2 text-center font-bold text-emerald-400">${blendedYield}</td>`;
+                                return `<td class="p-2 text-center font-bold text-emerald-400 text-xs">${blendedYield}</td>`;
                             }).join('')}
                         </tr>
                     </tbody>
                 </table>
+                </div>
                 `;
 
                 gridContainer.innerHTML = html;
@@ -820,10 +791,6 @@
                     input.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter') {
                             e.target.blur();
-                        }
-                        // Tab navigation
-                        if (e.key === 'Tab') {
-                            // Default behavior is fine
                         }
                     });
                 });
@@ -902,156 +869,52 @@
                 }
             }
 
-            function updateSaveButton() {
-                if (hasUnsavedChanges) {
-                    saveBtn.classList.remove('bg-slate-700', 'text-slate-400', 'cursor-default');
-                    saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-lg');
-                    saveBtn.textContent = '💾 Save Changes';
-                } else {
-                    saveBtn.classList.add('bg-slate-700', 'text-slate-400', 'cursor-default');
-                    saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white', 'shadow-lg');
-                    saveBtn.textContent = '✓ All Saved';
-                }
-            }
-
+            // Handle allocation input changes with auto-save
             pieCardsContainer.addEventListener('input', (e) => {
-                hasUnsavedChanges = true;
                 const index = parseInt(e.target.dataset.index);
                 const target = e.target;
 
-                if (target.classList.contains('yield-input')) {
-                    pies[index].currentYield = parseFloat(target.value) || 0;
-                } else if (target.classList.contains('allocation-input')) {
+                if (target.classList.contains('allocation-input')) {
                     pies[index].allocation = parseFloat(target.value) || 0;
                 } else if (target.classList.contains('target-input')) {
                     pies[index].targetAllocation = target.value === '' ? null : parseFloat(target.value);
                 }
 
-                // Only update the totals, don't re-render the whole list
+                // Update the totals live
                 updateCalculatedDisplays();
-                updateSaveButton();
             });
 
-            pieCardsContainer.addEventListener('focusout', (e) => {
+            // Auto-save allocations on blur
+            pieCardsContainer.addEventListener('focusout', async (e) => {
                 const target = e.target;
                 if (target.classList.contains('allocation-input') || target.classList.contains('target-input')) {
-                    // Re-render the cards to update sorting and percentages
-                    updateUI();
-                }
-            });
-
-            function setInputsDisabled(disabled) {
-                const inputs = pieCardsContainer.querySelectorAll('input');
-                inputs.forEach(input => input.disabled = disabled);
-            }
-
-            monthSelect.addEventListener('change', (e) => {
-                selectedMonth = e.target.value;
-                if (selectedMonth) {
-                    setInputsDisabled(false);
-                    hasUnsavedChanges = true; // Or check against saved data
-                    updateSaveButton();
-                    monthSelect.classList.remove('border-red-500');
-                } else {
-                    setInputsDisabled(true);
-                    updateSaveButton();
-                }
-            });
-
-            function generateMonthOptions() {
-                const months = [];
-                const now = new Date();
-                const currentYear = now.getFullYear();
-                const currentMonth = now.getMonth();
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-                for (let year = currentYear; year <= currentYear + 2; year++) {
-                    monthNames.forEach((month, index) => {
-                        months.push(`${month} ${year}`);
-                    });
-                }
-
-                months.forEach(q => {
-                    const option = document.createElement('option');
-                    option.value = q;
-                    option.textContent = q;
-                    monthSelect.appendChild(option);
-                });
-            }
-
-            function saveYieldToHistory() {
-                if (!selectedMonth) {
-                    alert('Please select a month before saving yield data');
-                    return false;
-                }
-                const existingIndex = historicalData.findIndex(d => d.date === selectedMonth);
-                const newDataPoint = { date: selectedMonth };
-                pies.forEach(p => { newDataPoint[p.name] = p.currentYield; });
-
-                if (existingIndex !== -1) {
-                    historicalData[existingIndex] = newDataPoint;
-                } else {
-                    historicalData.push(newDataPoint);
-                    historicalData.sort((a, b) => {
-                        const [monthA, yearA] = a.date.split(' ');
-                        const [monthB, yearB] = b.date.split(' ');
-                        const monthOrder = {
-                            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-                        };
-                        if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
-                        return monthOrder[monthA] - monthOrder[monthB];
-                    });
-                }
-                return true;
-            }
-
-            async function saveDataToBackend() {
-                try {
-                    const piePayload = {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(pies)
-                    };
-                    await fetch('/api/pieAllocations', piePayload);
-
-                    if (saveYieldToHistory()) {
-                        const historyPayload = {
+                    // Show saving status
+                    const statusEl = document.getElementById('yield-save-status');
+                    statusEl.textContent = '💾 Saving...';
+                    statusEl.className = 'text-sm text-yellow-400';
+                    
+                    try {
+                        const piePayload = {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(historicalData)
+                            body: JSON.stringify(pies)
                         };
-                        await fetch('/api/yieldHistory', historyPayload);
+                        await fetch('/api/pieAllocations', piePayload);
+                        
+                        statusEl.textContent = '✓ Saved';
+                        statusEl.className = 'text-sm text-emerald-400';
+                        
+                        // Re-render to update sorting and percentages
+                        updateUI();
+                        
+                        setTimeout(() => {
+                            statusEl.textContent = '';
+                        }, 2000);
+                    } catch (error) {
+                        console.error('Auto-save failed:', error);
+                        statusEl.textContent = '❌ Save failed';
+                        statusEl.className = 'text-sm text-red-400';
                     }
-
-                    return true;
-                } catch (error) {
-                    console.error('Error saving data:', error);
-                    alert('❌ Error saving data.');
-                    return false;
-                }
-            }
-
-            saveBtn.addEventListener('click', async () => {
-                if (!selectedMonth) {
-                    alert('Please select a month before saving.');
-                    monthSelect.classList.add('border-red-500');
-                    return;
-                }
-
-                const success = await saveDataToBackend();
-                if (success) {
-                    hasUnsavedChanges = false;
-                    updateUI();
-
-                    const originalText = saveBtn.textContent;
-                    saveBtn.textContent = '✓ Saved!';
-                    saveBtn.classList.add('bg-green-600');
-                    setTimeout(() => {
-                        saveBtn.textContent = originalText;
-                        saveBtn.classList.remove('bg-green-600');
-                        updateSaveButton();
-                    }, 2000);
                 }
             });
 
@@ -1282,10 +1145,7 @@
             async function initializeTracker() {
                 await loadSavedData();
                 ensureNextMonthDataPoint();
-                generateMonthOptions();
-                nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
                 updateUI();
-                // Don't disable inputs - the yield grid is always editable
             }
             initializeTracker();
 
