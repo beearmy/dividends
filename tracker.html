@@ -68,7 +68,7 @@
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-emerald-400" id="ytd-total">£597.81</div>
-                        <div class="text-sm text-slate-400">2025 YTD</div>
+                        <div class="text-sm text-slate-400" id="ytd-label">2026 YTD</div>
                     </div>
                     <div class="text-right">
                         <div class="text-3xl font-bold text-sky-400" id="static-padi">£0.00</div>
@@ -144,6 +144,7 @@
                         <thead>
                             <tr class="bg-slate-700">
                                 <th class="p-3 text-left font-semibold text-slate-200">Month</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2026</th>
                                 <th class="p-3 text-right font-semibold text-slate-200">2025</th>
                                 <th class="p-3 text-right font-semibold text-slate-200">2024</th>
                                 <th class="p-3 text-right font-semibold text-slate-200">2023</th>
@@ -206,7 +207,14 @@
                                 <h3 class="font-semibold text-slate-200">Yield Trends Over Time</h3>
                                 <p id="next-update" class="text-sm text-slate-400">Next Update: </p>
                             </div>
+                            <div id="yield-save-status" class="text-sm text-slate-400"></div>
                         </div>
+                        
+                        <!-- Monthly Yield Input Grid -->
+                        <div id="yield-input-grid" class="mb-6 overflow-x-auto">
+                            <!-- Grid will be populated by JS -->
+                        </div>
+                        
                         <div style="height: 300px;">
                             <canvas id="yield-chart"></canvas>
                         </div>
@@ -214,24 +222,6 @@
                 </div>
             </details>
 
-            <!-- Goals Tracker -->
-            <details id="goals-container" class="mt-8 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl group">
-                <summary class="p-6 cursor-pointer group-open:border-b group-open:border-slate-700 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-3xl font-bold text-white">My Goals</h2>
-                    </div>
-                    <div class="transform transition-transform duration-200 group-open:rotate-180">
-                        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </summary>
-                <div class="p-6">
-                    <div id="goals-list" class="space-y-4">
-                        <!-- Goals will be dynamically inserted here -->
-                    </div>
-                </div>
-            </details>
         </div>
     </div>
 
@@ -274,7 +264,8 @@
             2022: { Jan: 3.50, Feb: 10.80, Mar: 8.00, Apr: 12.00, May: 8.50, Jun: 23.00, Jul: 6.00, Aug: 14.00, Sep: 23.50, Oct: 2.20, Nov: 11.00, Dec: 9.00 },
             2023: { Jan: 5.85, Feb: 13.39, Mar: 11.00, Apr: 9.77, May: 10.69, Jun: 24.19, Jul: 7.29, Aug: 23.16, Sep: 26.96, Oct: 9.50, Nov: 16.61, Dec: 17.56 },
             2024: { Jan: 7.33, Feb: 8.26, Mar: 11.89, Apr: 19.69, May: 19.44, Jun: 33.42, Jul: 27.60, Aug: 19.03, Sep: 34.56, Oct: 30.54, Nov: 20.31, Dec: 33.85 },
-            2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: null, Nov: null, Dec: null }
+            2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: null, Nov: null, Dec: null },
+            2026: { Jan: null, Feb: null, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null }
         };
 
         // Load saved data from backend
@@ -284,6 +275,10 @@
                 const result = await response.json();
                 if (result.data) {
                     data = result.data;
+                    // Ensure 2026 exists
+                    if (!data['2026']) {
+                        data['2026'] = { Jan: null, Feb: null, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null };
+                    }
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -347,7 +342,7 @@
         }
 
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const years = ['2025', '2024', '2023', '2022', '2021', '2020'];
+        const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
 
         function getComparison(year, month) {
             const yearIndex = years.indexOf(year);
@@ -409,9 +404,15 @@
         }
 
         function updateStats() {
-            // YTD Total
-            const ytdTotal = Object.values(data['2025']).reduce((sum, val) => sum + (val || 0), 0);
+            // Get current year for YTD
+            const currentYear = new Date().getFullYear().toString();
+            const ytdTotal = data[currentYear] ? Object.values(data[currentYear]).reduce((sum, val) => sum + (val || 0), 0) : 0;
             document.getElementById('ytd-total').textContent = `£${ytdTotal.toFixed(2)}`;
+            // Update label
+            const ytdLabel = document.getElementById('ytd-label');
+            if (ytdLabel) {
+                ytdLabel.textContent = `${currentYear} YTD`;
+            }
         }
 
         function buildTable() {
@@ -730,7 +731,175 @@
                 updateCalculatedDisplays();
                 renderPieCards();
                 updateSaveButton();
+                renderYieldInputGrid();
                 renderYieldChart();
+            }
+
+            // Render the editable yield input grid
+            function renderYieldInputGrid() {
+                const gridContainer = document.getElementById('yield-input-grid');
+                if (!gridContainer) return;
+
+                // Build a table with months as columns and pies as rows
+                let html = `
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-slate-700/50">
+                                <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700/50">Pie</th>
+                                ${historicalData.map((d, i) => {
+                                    const isNextMonth = i === historicalData.length - 1 && !pies.some(pie => d[pie.name] != null);
+                                    return `<th class="p-2 text-center text-slate-300 font-medium min-w-[80px] ${isNextMonth ? 'bg-slate-600/30' : ''}">${d.date}${isNextMonth ? ' <span class="text-xs text-emerald-400">(next)</span>' : ''}</th>`;
+                                }).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                pies.forEach((pie, pieIndex) => {
+                    html += `
+                        <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+                            <td class="p-2 font-medium text-slate-200 sticky left-0 bg-slate-800">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full" style="background-color: ${pie.color};"></div>
+                                    <span class="truncate">${pie.name}</span>
+                                </div>
+                            </td>
+                            ${historicalData.map((d, monthIndex) => {
+                                const yieldValue = d[pie.name];
+                                const hasValue = yieldValue !== null && yieldValue !== undefined;
+                                const isNextMonth = monthIndex === historicalData.length - 1 && !pies.some(p => d[p.name] != null);
+                                return `
+                                    <td class="p-1 ${isNextMonth ? 'bg-slate-600/20' : ''}">
+                                        <input 
+                                            type="number" 
+                                            step="0.01" 
+                                            value="${hasValue ? yieldValue : ''}" 
+                                            placeholder="-"
+                                            class="yield-grid-input w-full px-2 py-1 text-center bg-slate-700/50 text-white rounded border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs ${isNextMonth ? 'border-emerald-600/50' : ''}"
+                                            data-pie-index="${pieIndex}"
+                                            data-month-index="${monthIndex}"
+                                            data-date="${d.date}"
+                                        >
+                                    </td>
+                                `;
+                            }).join('')}
+                        </tr>
+                    `;
+                });
+
+                // Add blended yield row
+                html += `
+                        <tr class="border-t-2 border-slate-600 bg-slate-700/30">
+                            <td class="p-2 font-bold text-white sticky left-0 bg-slate-700">Blended Yield</td>
+                            ${historicalData.map((d, monthIndex) => {
+                                const hasAnyYield = pies.some(pie => d[pie.name] != null);
+                                let blendedYield = '-';
+                                if (hasAnyYield) {
+                                    const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                                    if (totalAllocation > 0) {
+                                        const weightedYield = pies.reduce((sum, pie) => {
+                                            const yieldVal = d[pie.name];
+                                            if (yieldVal === null || yieldVal === undefined) return sum;
+                                            return sum + (yieldVal * pie.allocation);
+                                        }, 0);
+                                        blendedYield = (weightedYield / totalAllocation).toFixed(2) + '%';
+                                    }
+                                }
+                                return `<td class="p-2 text-center font-bold text-emerald-400">${blendedYield}</td>`;
+                            }).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+                `;
+
+                gridContainer.innerHTML = html;
+
+                // Add event listeners for auto-save on blur
+                gridContainer.querySelectorAll('.yield-grid-input').forEach(input => {
+                    input.addEventListener('blur', handleYieldInputBlur);
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.target.blur();
+                        }
+                        // Tab navigation
+                        if (e.key === 'Tab') {
+                            // Default behavior is fine
+                        }
+                    });
+                });
+            }
+
+            // Handle yield input blur - auto-save
+            async function handleYieldInputBlur(e) {
+                const input = e.target;
+                const pieIndex = parseInt(input.dataset.pieIndex);
+                const monthIndex = parseInt(input.dataset.monthIndex);
+                const date = input.dataset.date;
+                const newValue = input.value === '' ? null : parseFloat(input.value);
+                
+                const pieName = pies[pieIndex].name;
+                const oldValue = historicalData[monthIndex][pieName];
+                
+                // Only save if value changed
+                if (oldValue === newValue || (oldValue === undefined && newValue === null)) {
+                    return;
+                }
+                
+                // Update the historical data
+                historicalData[monthIndex][pieName] = newValue;
+                
+                // Also update the pie's currentYield if this is the most recent month with data
+                const lastMonthWithData = historicalData.findLastIndex(d => 
+                    pies.some(pie => d[pie.name] != null)
+                );
+                if (monthIndex === lastMonthWithData && newValue !== null) {
+                    pies[pieIndex].currentYield = newValue;
+                }
+                
+                // Show saving status
+                const statusEl = document.getElementById('yield-save-status');
+                statusEl.textContent = '💾 Saving...';
+                statusEl.className = 'text-sm text-yellow-400';
+                
+                // Auto-save to backend
+                try {
+                    const historyPayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(historicalData)
+                    };
+                    await fetch('/api/yieldHistory', historyPayload);
+                    
+                    // Also save pie allocations if currentYield was updated
+                    const piePayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pies)
+                    };
+                    await fetch('/api/pieAllocations', piePayload);
+                    
+                    statusEl.textContent = '✓ Saved';
+                    statusEl.className = 'text-sm text-emerald-400';
+                    
+                    // Ensure next month exists and update chart
+                    ensureNextMonthDataPoint();
+                    renderYieldChart();
+                    updateCalculatedDisplays();
+                    
+                    // Re-render grid to show new next month if added
+                    const gridNeedsUpdate = historicalData.length !== document.querySelectorAll('.yield-grid-input[data-pie-index="0"]').length;
+                    if (gridNeedsUpdate) {
+                        renderYieldInputGrid();
+                    }
+                    
+                    setTimeout(() => {
+                        statusEl.textContent = '';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                    statusEl.textContent = '❌ Save failed';
+                    statusEl.className = 'text-sm text-red-400';
+                }
             }
 
             function updateSaveButton() {
@@ -1039,10 +1208,39 @@
 
             function ensureNextMonthDataPoint() {
                 if (historicalData.length === 0) {
+                    // Initialize with current month if no data
+                    const now = new Date();
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const currentMonthStr = monthNames[now.getMonth()];
+                    const currentYear = now.getFullYear();
+                    const newEntry = { date: `${currentMonthStr} ${currentYear}` };
+                    pies.forEach(pie => {
+                        newEntry[pie.name] = null;
+                    });
+                    historicalData.push(newEntry);
                     return;
                 }
 
-                const lastEntry = historicalData[historicalData.length - 1];
+                // Find the last month that has actual data
+                const lastMonthWithData = historicalData.findLastIndex(d => 
+                    pies.some(pie => d[pie.name] != null)
+                );
+
+                // If no data at all, just keep the empty placeholder
+                if (lastMonthWithData === -1) {
+                    return;
+                }
+
+                // Check if we already have an empty "next month" after the last data
+                const hasEmptyNextMonth = lastMonthWithData < historicalData.length - 1;
+                
+                if (hasEmptyNextMonth) {
+                    // Already have a next month placeholder
+                    return;
+                }
+
+                // Add next month after the last month with data
+                const lastEntry = historicalData[lastMonthWithData];
                 const [lastMonthStr, lastYearStr] = lastEntry.date.split(' ');
                 const lastYear = parseInt(lastYearStr);
 
@@ -1068,6 +1266,14 @@
                         newEntry[pie.name] = null;
                     });
                     historicalData.push(newEntry);
+                    // Sort to ensure proper order
+                    const monthOrder = { 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12 };
+                    historicalData.sort((a, b) => {
+                        const [monthA, yearA] = a.date.split(' ');
+                        const [monthB, yearB] = b.date.split(' ');
+                        if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+                        return monthOrder[monthA] - monthOrder[monthB];
+                    });
                 }
             }
 
@@ -1079,147 +1285,10 @@
                 generateMonthOptions();
                 nextUpdateEl.textContent = `Next Update: ${getNextUpdate()}`;
                 updateUI();
-                setInputsDisabled(true);
+                // Don't disable inputs - the yield grid is always editable
             }
             initializeTracker();
 
-            // --- Goals Tracker ---
-            const goals = [
-                { id: 1, text: '£7.81 = £2344', targetDate: '2023-12-21', completedDate: '2023-12-18', notes: '' },
-                { id: 2, text: '£11.5 = £3516', targetDate: '2024-07-21', completedDate: '2023-12-29', notes: '' },
-                { id: 3, text: '£15.62 = £4688', targetDate: '2024-12-21', completedDate: '2024-03-14', notes: '' },
-                { id: 4, text: '£31.25 = £9375', targetDate: '2025-12-21', completedDate: '2024-04-03', notes: '' },
-                { id: 5, text: '£46.86 = £14063', targetDate: '2026-07-21', completedDate: '2024-12-03', notes: '' },
-                { id: 6, text: '£62.50 = £18750', targetDate: '2026-12-21', completedDate: '2025-03-16', notes: '' },
-                { id: 7, text: '£93.75 = £28125 (+£8000)', targetDate: '2026-04-01', completedDate: '2025-09-04', notes: 'MAGA Monday 07/04/25 (Yield 3.64%) (£19,996)' },
-                { id: 8, text: '£125 = £37500 (+£9375)', targetDate: '2028-07-21', completedDate: null, notes: 'Reassess strategy (more UK dividends? Less Fx fees, other Daily Dividend UK pie) *6.88% in £ 03/05/24* *27.18% in £ 04/0925 (via Snowball)*' },
-                { id: 9, text: '£187.50 = £56250 (+£18750)', targetDate: null, completedDate: null, notes: '' },
-                { id: 10, text: '£250 = £75000 (+£18750)', targetDate: '2030-12-21', completedDate: null, notes: 'Pivot DRIP to mortgage overpayments? £100,000 is tipping point for self-fulfilling FIRE goals @ 5.93% yield. £74,125 is your tipping point at an 8% yield' },
-                { id: 11, text: '£375 = £112500 (+£37500)', targetDate: null, completedDate: null, notes: 'Overtime 8 hour shift = £300\nAssets protected on T212 for £85k' },
-                { id: 12, text: '£500 = £150000 (+£37500)', targetDate: '2032-12-21', completedDate: null, notes: '' },
-                { id: 13, text: 'Overtime 13 hour shift = £500', targetDate: null, completedDate: null, notes: 'Reassess UK Top £ payers & high risk pie. Start withdrawal from Almost Daily Dividends but smooth out the monthly incomes' },
-                { id: 14, text: 'Overtime 16 hour shift = £600', targetDate: null, completedDate: null, notes: 'Reassess strategy (property?) (growth dividends?)' },
-            ];
-
-            const goalsList = document.getElementById('goals-list');
-
-            function calculateDateDifference(date1, date2) {
-                const d1 = new Date(date1);
-                const d2 = new Date(date2);
-                if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
-                    return { days: 0, months: 0, years: 0, totalDays: 0, isEarly: false };
-                }
-
-                const isEarly = d1 < d2;
-                const diffTime = Math.abs(d2 - d1);
-                const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                let years = Math.floor(totalDays / 365);
-                let months = Math.floor((totalDays % 365) / 30);
-                let days = totalDays % 30;
-
-                return { days, months, years, totalDays, isEarly };
-            }
-
-            function formatDifference(diff) {
-                if (diff.totalDays === 0) return '';
-                const parts = [];
-                if (diff.years > 0) parts.push(`${diff.years} year${diff.years > 1 ? 's' : ''}`);
-                if (diff.months > 0) parts.push(`${diff.months} month${diff.months > 1 ? 's' : ''}`);
-                if (diff.days > 0) parts.push(`${diff.days} day${diff.days > 1 ? 's' : ''}`);
-                return parts.join(', ');
-            }
-
-            function renderGoal(goal) {
-                const goalEl = document.createElement('div');
-                goalEl.className = 'goal-item bg-slate-900/50 border border-slate-700 rounded-lg p-4 transition-all duration-300';
-
-                const isCompleted = goal.completedDate !== null;
-                const completionStatus = isCompleted
-                    ? calculateDateDifference(goal.completedDate, goal.targetDate)
-                    : calculateDateDifference(new Date().toISOString().split('T')[0], goal.targetDate);
-
-                let statusText = '';
-                if (isCompleted) {
-                    if (completionStatus.isEarly) {
-                        statusText = `Completed ${formatDifference(completionStatus)} ahead of schedule.`;
-                    } else {
-                        statusText = `Completed ${formatDifference(completionStatus)} behind schedule.`;
-                    }
-                } else if (goal.targetDate) {
-                    statusText = `${formatDifference(completionStatus)} left to complete.`;
-                }
-
-                goalEl.innerHTML = `
-                    <div class="flex items-start">
-                        <input id="goal-${goal.id}" data-goal-id="${goal.id}" type="checkbox" class="goal-checkbox h-6 w-6 rounded bg-slate-700 border-slate-600 text-emerald-500 focus:ring-emerald-600 cursor-pointer mt-1" ${isCompleted ? 'checked' : ''}>
-                        <div class="ml-4 flex-1">
-                            <label for="goal-${goal.id}" class="text-lg font-medium text-slate-200 cursor-pointer ${isCompleted ? 'line-through text-slate-500' : ''}">#${goal.id} ${goal.text}</label>
-                            <div class="text-sm text-slate-400 mt-1">
-                                ${goal.targetDate ? `<strong>Target:</strong> ${new Date(goal.targetDate).toLocaleDateString()}` : ''}
-                                ${isCompleted ? `<strong class="ml-2">Completed:</strong> ${new Date(goal.completedDate).toLocaleDateString()}` : ''}
-                            </div>
-                            <p class="status-text text-xs mt-2 font-semibold ${isCompleted ? (completionStatus.isEarly ? 'text-emerald-400' : 'text-amber-400') : 'text-blue-400'}">${statusText}</p>
-                            ${goal.notes ? `<p class="notes text-xs text-slate-500 mt-2 whitespace-pre-line">${goal.notes}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-                return goalEl;
-            }
-
-            function renderGoals() {
-                goalsList.innerHTML = '';
-                const activeGoals = goals.filter(g => g.completedDate === null);
-                const completedGoals = goals.filter(g => g.completedDate !== null);
-
-                activeGoals.sort((a, b) => a.id - b.id);
-
-                activeGoals.forEach(goal => {
-                    goalsList.appendChild(renderGoal(goal));
-                });
-
-                if (completedGoals.length > 0) {
-                    const details = document.createElement('details');
-                    details.className = 'bg-slate-900/50 border border-slate-700 rounded-lg group';
-
-                    const summary = document.createElement('summary');
-                    summary.className = 'p-4 cursor-pointer flex items-center justify-between';
-                    summary.innerHTML = `
-                        <h3 class="text-lg font-medium text-slate-200">Completed Goals (${completedGoals.length})</h3>
-                        <div class="transform transition-transform duration-200 group-open:rotate-180">
-                            <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    `;
-
-                    const completedContainer = document.createElement('div');
-                    completedContainer.className = 'p-4 space-y-4 border-t border-slate-700';
-
-                    completedGoals.sort((a,b) => new Date(b.completedDate) - new Date(a.completedDate));
-
-                    completedGoals.forEach(goal => {
-                        completedContainer.appendChild(renderGoal(goal));
-                    });
-
-                    details.appendChild(summary);
-                    details.appendChild(completedContainer);
-                    goalsList.appendChild(details);
-                }
-            }
-
-            goalsList.addEventListener('change', (e) => {
-                if (e.target.classList.contains('goal-checkbox')) {
-                    const goalId = parseInt(e.target.dataset.goalId);
-                    const goal = goals.find(g => g.id === goalId);
-                    if (goal) {
-                        goal.completedDate = e.target.checked ? new Date().toISOString().split('T')[0] : null;
-                        renderGoals();
-                    }
-                }
-            });
-
-            renderGoals();
         });
     </script>
 </body>
