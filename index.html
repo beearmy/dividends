@@ -383,17 +383,30 @@ const nid  = () => portfolios.length ? Math.max(...portfolios.map(p=>p.id))+1 : 
 async function load() {
     try {
         const r = await fetch('/api/portfolioData');
+        if (!r.ok) throw new Error('Failed to load portfolio data: ' + r.statusText);
         const j = await r.json();
-        if (j.data) { portfolios = j.data.portfolios || []; combinedGoal = j.data.combinedGoal || 0; }
-    } catch(e){ console.error(e); }
+        if (j.data) {
+            portfolios = j.data.portfolios || [];
+            combinedGoal = j.data.combinedGoal || 0;
+            console.log('Portfolio data loaded:', portfolios.length, 'portfolios');
+        }
+    } catch(e){
+        console.error('Error loading portfolio data:', e);
+    }
 }
 async function save() {
     try {
-        await fetch('/api/portfolioData', {
-            method:'POST', headers:{'Content-Type':'application/json'},
+        const r = await fetch('/api/portfolioData', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ portfolios, combinedGoal })
         });
-    } catch(e){ console.error(e); }
+        if (!r.ok) throw new Error('Failed to save portfolio data: ' + r.statusText);
+        const j = await r.json();
+        console.log('Portfolio data saved successfully:', j);
+    } catch(e){
+        console.error('Error saving portfolio data:', e);
+    }
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
