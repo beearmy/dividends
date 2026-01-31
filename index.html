@@ -375,7 +375,8 @@
 let portfolios = [], combinedGoal = 0, editingId = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
-const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
+const fmt2 = n => '£' + n.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = v => parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0;
 const nid  = () => portfolios.length ? Math.max(...portfolios.map(p=>p.id))+1 : 1;
 
@@ -427,8 +428,8 @@ function preview(p){
     el.classList.add('show');
     el.innerHTML='<div><div class="p-label">Annual</div><div class="p-val hi">'+fmt(a)+'</div></div>'+
         '<div><div class="p-label">Monthly</div><div class="p-val">'+fmt(a/12)+'</div></div>'+
-        '<div><div class="p-label">Daily</div><div class="p-val">'+fmt(a/365)+'</div></div>'+
-        '<div><div class="p-label">Hourly</div><div class="p-val">'+fmt(a/WH)+'</div></div>';
+        '<div><div class="p-label">Daily</div><div class="p-val">'+fmt2(a/365)+'</div></div>'+
+        '<div><div class="p-label">Hourly</div><div class="p-val">'+fmt2(a/WH)+'</div></div>';
 }
 
 // ── ADD ──────────────────────────────────────────────────────────────────────
@@ -502,8 +503,23 @@ function renderCombined(){
         const pct=(totA/combinedGoal)*100, done=totA>=combinedGoal;
         gb='<div class="goal-box'+(done?' done':'')+'">'+ring(pct,130,12)+
             '<div class="g-prog"><span class="gv">'+fmt(totA)+'</span> / '+fmt(combinedGoal)+'</div>';
-        if(!done){ const need=avg>0?(combinedGoal-totA)/(avg/100):0; gb+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at your average yield to reach your goal</div>'; }
-        else gb+='<div class="g-done">🎉 Goal achieved! Earning '+fmt(totA-combinedGoal)+' above target</div>';
+        if(!done){
+            const need=avg>0?(combinedGoal-totA)/(avg/100):0;
+            gb+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at your average yield to reach your goal</div>';
+            if(avg > 0 && totA > 0) {
+                const r = Math.pow(1 + avg / 100, 1 / 12) - 1;
+                const mReq = Math.ceil(Math.log(combinedGoal / totA) / Math.log(1 + r));
+                let tStr = "";
+                if (mReq < 13) {
+                    tStr = mReq + " month" + (mReq !== 1 ? "s" : "");
+                } else {
+                    const yrs = Math.floor(mReq / 12), mos = mReq % 12;
+                    tStr = yrs + " year" + (yrs !== 1 ? "s" : "") + (mos > 0 ? " " + mos + " month" + (mos !== 1 ? "s" : "") : "");
+                }
+                gb += '<div class="g-hint" style="margin-top:10px; color:var(--text); font-weight:600; font-size:13px;">On course to reach your goal in <span class="hl" style="color:var(--green)">' + tStr + '</span> through dividend reinvestment! 🚀</div>';
+            }
+        }
+        else gb+='<div class="g-done" style="font-size:14px; margin-top:12px;">Congratulations! 🍾 What’s next?</div>';
         gb+='</div>';
     } else {
         gb='<div class="goal-empty">No combined goal set — click <span class="hl">+ Set Goal</span> above</div>';
@@ -515,8 +531,8 @@ function renderCombined(){
             '<div class="c-total">'+fmt(totA)+'</div>'+
             '<div class="c-stats">'+
                 '<div class="c-stat"><div class="cs-l">Monthly</div><div class="cs-v">'+fmt(totA/12)+'</div></div>'+
-                '<div class="c-stat"><div class="cs-l">Daily</div><div class="cs-v">'+fmt(totA/365)+'</div></div>'+
-                '<div class="c-stat"><div class="cs-l">Hourly</div><div class="cs-v">'+fmt(totA/WH)+'</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Daily</div><div class="cs-v">'+fmt2(totA/365)+'</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Hourly</div><div class="cs-v">'+fmt2(totA/WH)+'</div></div>'+
                 '<div class="c-stat"><div class="cs-l">Avg Yield</div><div class="cs-v">'+avg.toFixed(2)+'%</div></div>'+
             '</div>'+
         '</div>'+
@@ -550,8 +566,8 @@ function renderCards(){
             '<div class="card-stats">'+
                 '<div class="s-row"><span class="sl">Invested</span><span class="sv">'+fmt(p.totalInvested)+'</span></div>'+
                 '<div class="s-row"><span class="sl">Monthly</span><span class="sv">'+fmt(a/12)+'</span></div>'+
-                '<div class="s-row"><span class="sl">Daily</span><span class="sv">'+fmt(a/365)+'</span></div>'+
-                '<div class="s-row"><span class="sl">Hourly</span><span class="sv">'+fmt(a/WH)+'</span></div>'+
+                '<div class="s-row"><span class="sl">Daily</span><span class="sv">'+fmt2(a/365)+'</span></div>'+
+                '<div class="s-row"><span class="sl">Hourly</span><span class="sv">'+fmt2(a/WH)+'</span></div>'+
                 '<div class="s-row"><span class="sl">Yield</span><span class="sv">'+p.yieldPercent.toFixed(2)+'%</span></div>'+
             '</div>'+gs+
         '</div>';
