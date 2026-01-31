@@ -20,6 +20,12 @@ async function createTables() {
                 data JSONB
             );
         `;
+        await sql`
+            CREATE TABLE IF NOT EXISTS portfolio_data (
+                id SERIAL PRIMARY KEY,
+                data JSONB
+            );
+        `;
 
         // Check if dividend_data is empty, and if so, insert the default data.
         const { rows: dividendRows } = await sql`SELECT COUNT(*) as count FROM dividend_data`;
@@ -56,6 +62,13 @@ async function createTables() {
                 { "date": "Nov 2025", "Income Factory": null, "Low Risk": null, "Medium Risk": null, "High Risk": null, "Top UK Payers": null }
             ];
             await sql`INSERT INTO yield_history (data) VALUES (${JSON.stringify(defaultYieldData)})`;
+        }
+
+        // Check if portfolio_data is empty, and if so, insert the default data.
+        const { rows: portfolioRows } = await sql`SELECT COUNT(*) as count FROM portfolio_data`;
+        if (portfolioRows[0].count === '0') {
+            const defaultPortfolioData = { portfolios: [], combinedGoal: 0 };
+            await sql`INSERT INTO portfolio_data (data) VALUES (${JSON.stringify(defaultPortfolioData)})`;
         }
 
 
