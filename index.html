@@ -306,7 +306,8 @@
 </nav>
 <div id="menu">
     <a href="index.html">Home</a>
-    <button onclick="showPwModal()">My Tracker 🔒</button>
+    <button id="menu-auth-btn" onclick="userId ? window.location.href='tracker.html' : showPwModal()"></button>
+    <button id="logout-btn" onclick="logout()" style="display:none">Logout</button>
 </div>
 
 <!-- PASSWORD MODAL -->
@@ -315,7 +316,7 @@
         <div class="modal-head"><h2>Enter Password</h2><button class="modal-close" onclick="hidePwModal()">✕</button></div>
         <p>Enter your password to access your personal dividend tracker.</p>
         <div class="field"><div class="field-row"><input type="password" id="pwInput" class="fn" placeholder="Password" onkeypress="if(event.key==='Enter')checkPw()"></div></div>
-        <div id="pwErr" class="error">Incorrect password. Please try again.</div>
+        <div id="pwErr" class="error">Authentication failed. Please try again.</div>
         <div class="btn-row">
             <button class="btn-primary" onclick="checkPw()">Submit</button>
             <button class="btn-ghost" onclick="hidePwModal()">Cancel</button>
@@ -401,6 +402,7 @@
 
 <script>
 let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, includeTopUp = true, editingId = null;
+let token = localStorage.getItem('divTrackerToken');
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -410,8 +412,11 @@ const nid  = () => portfolios.length ? Math.max(...portfolios.map(p=>p.id))+1 : 
 
 // ── API ──────────────────────────────────────────────────────────────────────
 async function load() {
+    if (!token) { render(); return; }
     try {
-        const r = await fetch('/api/portfolioData');
+        const r = await fetch('/api/portfolioData', {
+            headers: { 'X-Auth-Token': token }
+        });
         const j = await r.json();
         if (j.data) {
             portfolios = j.data.portfolios || [];
@@ -427,9 +432,14 @@ async function load() {
     } catch(e){ console.error(e); }
 }
 async function save() {
+    if (!token) return;
     try {
         await fetch('/api/portfolioData', {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'X-Auth-Token': token
+            },
             body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, includeTopUp })
         });
     } catch(e){ console.error(e); }
@@ -442,13 +452,42 @@ document.addEventListener('click', e => {
     if (!m.contains(e.target) && !e.target.closest('.hamburger')) m.classList.remove('open');
 });
 
-// ── PASSWORD ─────────────────────────────────────────────────────────────────
+// ── AUTHENTICATION ──────────────────────────────────────────────────────────
 function showPwModal(){ document.getElementById('menu').classList.remove('open'); document.getElementById('pwModal').classList.add('open'); setTimeout(()=>document.getElementById('pwInput').focus(),50); }
 function hidePwModal(){ document.getElementById('pwModal').classList.remove('open'); document.getElementById('pwInput').value=''; document.getElementById('pwErr').classList.remove('show'); }
-function checkPw(){
-    const h = CryptoJS.SHA256(document.getElementById('pwInput').value).toString();
-    if(h==='d5378a00c61377598c6f3dc4a00d4507b68f7e214bbee32ac241d6957aa0b7bd'){ window.location.href='tracker.html'; }
-    else { document.getElementById('pwErr').classList.add('show'); document.getElementById('pwInput').value=''; document.getElementById('pwInput').focus(); }
+async function checkPw(){
+    const pw = document.getElementById('pwInput').value;
+    if (!pw) return;
+    const h = CryptoJS.SHA256(pw).toString();
+    try {
+        const r = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passwordHash: h })
+        });
+        const j = await r.json();
+        if (j.token) {
+            token = j.token;
+            localStorage.setItem('divTrackerToken', token);
+            hidePwModal();
+            await load();
+            render();
+        } else {
+            document.getElementById('pwErr').classList.add('show');
+            document.getElementById('pwInput').value='';
+            document.getElementById('pwInput').focus();
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Authentication failed. Please try again.');
+    }
+}
+function logout() {
+    localStorage.removeItem('divTrackerToken');
+    token = null;
+    portfolios = [];
+    combinedGoal = 0;
+    render();
 }
 document.getElementById('pwModal').addEventListener('click', function(e){ if(e.target===this) hidePwModal(); });
 
@@ -608,7 +647,26 @@ function ring(pct, sz, sw){
 }
 
 // ── RENDER ───────────────────────────────────────────────────────────────────
-function render(){ renderCombined(); renderCards(); }
+function render(){
+    const authBtn = document.getElementById('menu-auth-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    if (token) {
+        authBtn.innerText = 'My Tracker';
+        logoutBtn.style.display = 'block';
+    } else {
+        authBtn.innerText = 'Login 🔒';
+        logoutBtn.style.display = 'none';
+    }
+
+    if (!token) {
+        document.getElementById('combined').innerHTML = '';
+        document.getElementById('cards').innerHTML = '<div class="empty"><div class="ei">🔒</div><p>Please <span class="hl" style="cursor:pointer" onclick="showPwModal()">Login</span> to see your portfolio.</p></div>';
+        return;
+    }
+
+    renderCombined();
+    renderCards();
+}
 
 function getGoalBlock(goal, name, totA, avg, topUp = 0, incTopUp = true) {
     if (goal <= 0) return '';

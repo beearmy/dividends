@@ -3,32 +3,60 @@ const { sql } = require('@vercel/postgres');
 async function createTables() {
     try {
         await sql`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                password_hash TEXT UNIQUE NOT NULL
+            );
+        `;
+        await sql`
             CREATE TABLE IF NOT EXISTS dividend_data (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) UNIQUE,
                 data JSONB
             );
         `;
         await sql`
             CREATE TABLE IF NOT EXISTS pie_allocations (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) UNIQUE,
                 data JSONB
             );
         `;
         await sql`
             CREATE TABLE IF NOT EXISTS yield_history (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) UNIQUE,
                 data JSONB
             );
         `;
         await sql`
             CREATE TABLE IF NOT EXISTS portfolio_data (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) UNIQUE,
                 data JSONB
             );
         `;
 
-        // Check if dividend_data is empty, and if so, insert the default data.
-        const { rows: dividendRows } = await sql`SELECT COUNT(*) as count FROM dividend_data`;
+        // Create default user if not exists (existing hardcoded password hash)
+        const defaultHash = 'd5378a00c61377598c6f3dc4a00d4507b68f7e214bbee32ac241d6957aa0b7bd';
+        await sql`INSERT INTO users (password_hash) VALUES (${defaultHash}) ON CONFLICT (password_hash) DO NOTHING`;
+        const { rows: userRows } = await sql`SELECT id FROM users WHERE password_hash = ${defaultHash}`;
+        const defaultUserId = userRows[0].id;
+
+        // Migration: Add user_id to existing tables if it's missing
+        await sql`ALTER TABLE dividend_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+        await sql`ALTER TABLE pie_allocations ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+        await sql`ALTER TABLE yield_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+        await sql`ALTER TABLE portfolio_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+
+        // Update existing rows that have NULL user_id to belong to the default user
+        await sql`UPDATE dividend_data SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
+        await sql`UPDATE pie_allocations SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
+        await sql`UPDATE yield_history SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
+        await sql`UPDATE portfolio_data SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
+
+        // Check if dividend_data is empty for the default user, and if so, insert the default data.
+        const { rows: dividendRows } = await sql`SELECT COUNT(*) as count FROM dividend_data WHERE user_id = ${defaultUserId}`;
         if (dividendRows[0].count === '0') {
             const defaultDividendData = {
                 "2020": { "Jan": 2.38, "Feb": 8.05, "Mar": 6.29, "Apr": 0.63, "May": 6.29, "Jun": 6.27, "Jul": 5.96, "Aug": 11.07, "Sep": 15.34, "Oct": 0.71, "Nov": 9.19, "Dec": 6.77 },
@@ -38,11 +66,10 @@ async function createTables() {
                 "2024": { "Jan": 7.33, "Feb": 8.26, "Mar": 11.89, "Apr": 19.69, "May": 19.44, "Jun": 33.42, "Jul": 27.60, "Aug": 19.03, "Sep": 34.56, "Oct": 30.54, "Nov": 20.31, "Dec": 33.85 },
                 "2025": { "Jan": 35.85, "Feb": 25.20, "Mar": 44.84, "Apr": 53.72, "May": 44.76, "Jun": 62.39, "Jul": 75.65, "Aug": 47.27, "Sep": 117.14, "Oct": null, "Nov": null, "Dec": null }
             };
-            await sql`INSERT INTO dividend_data (data) VALUES (${JSON.stringify(defaultDividendData)})`;
+            await sql`INSERT INTO dividend_data (data, user_id) VALUES (${JSON.stringify(defaultDividendData)}, ${defaultUserId})`;
         }
 
-        // Check if pie_allocations is empty, and if so, insert the default data.
-        const { rows: pieRows } = await sql`SELECT COUNT(*) as count FROM pie_allocations`;
+        const { rows: pieRows } = await sql`SELECT COUNT(*) as count FROM pie_allocations WHERE user_id = ${defaultUserId}`;
         if (pieRows[0].count === '0') {
             const defaultPieData = [
                 { "name": "Income Factory", "currentYield": 10.77, "allocation": 0, "targetAllocation": null, "color": "#f59e0b" },
@@ -51,24 +78,22 @@ async function createTables() {
                 { "name": "High Risk", "currentYield": 22.0, "allocation": 0, "targetAllocation": null, "color": "#ef4444" },
                 { "name": "Top UK Payers", "currentYield": 8.21, "allocation": 0, "targetAllocation": null, "color": "#3b82f6" }
             ];
-            await sql`INSERT INTO pie_allocations (data) VALUES (${JSON.stringify(defaultPieData)})`;
+            await sql`INSERT INTO pie_allocations (data, user_id) VALUES (${JSON.stringify(defaultPieData)}, ${defaultUserId})`;
         }
 
-        // Check if yield_history is empty, and if so, insert the default data.
-        const { rows: yieldRows } = await sql`SELECT COUNT(*) as count FROM yield_history`;
+        const { rows: yieldRows } = await sql`SELECT COUNT(*) as count FROM yield_history WHERE user_id = ${defaultUserId}`;
         if (yieldRows[0].count === '0') {
             const defaultYieldData = [
                 { "date": "Oct 2025", "Income Factory": 10.77, "Low Risk": 4.42, "Medium Risk": 3.03, "High Risk": 22.0, "Top UK Payers": 8.21 },
                 { "date": "Nov 2025", "Income Factory": null, "Low Risk": null, "Medium Risk": null, "High Risk": null, "Top UK Payers": null }
             ];
-            await sql`INSERT INTO yield_history (data) VALUES (${JSON.stringify(defaultYieldData)})`;
+            await sql`INSERT INTO yield_history (data, user_id) VALUES (${JSON.stringify(defaultYieldData)}, ${defaultUserId})`;
         }
 
-        // Check if portfolio_data is empty, and if so, insert the default data.
-        const { rows: portfolioRows } = await sql`SELECT COUNT(*) as count FROM portfolio_data`;
+        const { rows: portfolioRows } = await sql`SELECT COUNT(*) as count FROM portfolio_data WHERE user_id = ${defaultUserId}`;
         if (portfolioRows[0].count === '0') {
             const defaultPortfolioData = { portfolios: [], combinedGoal: 0 };
-            await sql`INSERT INTO portfolio_data (data) VALUES (${JSON.stringify(defaultPortfolioData)})`;
+            await sql`INSERT INTO portfolio_data (data, user_id) VALUES (${JSON.stringify(defaultPortfolioData)}, ${defaultUserId})`;
         }
 
 

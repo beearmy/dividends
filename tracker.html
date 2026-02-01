@@ -54,6 +54,9 @@
             <a href="tracker.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
                 My Tracker
             </a>
+            <button onclick="logout()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                Logout
+            </button>
         </div>
     </div>
 
@@ -215,6 +218,16 @@
     </div>
 
     <script>
+        const token = localStorage.getItem('divTrackerToken');
+        if (!token) {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('divTrackerToken');
+            window.location.href = 'index.html';
+        }
+
         // Menu toggle
         function toggleMenu(event) {
             event.stopPropagation();
@@ -260,7 +273,9 @@
         // Load saved data from backend
         async function loadData() {
             try {
-                const response = await fetch('/api/dividendData');
+                const response = await fetch('/api/dividendData', {
+                    headers: { 'X-Auth-Token': token }
+                });
                 const result = await response.json();
                 if (result.data) {
                     data = result.data;
@@ -280,7 +295,8 @@
                 await fetch('/api/dividendData', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Auth-Token': token
                     },
                     body: JSON.stringify(data)
                 });
@@ -901,7 +917,10 @@
                 try {
                     const historyPayload = {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Auth-Token': token
+                        },
                         body: JSON.stringify(historicalData)
                     };
                     await fetch('/api/yieldHistory', historyPayload);
@@ -909,7 +928,10 @@
                     // Also save pie allocations with updated currentYield
                     const piePayload = {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Auth-Token': token
+                        },
                         body: JSON.stringify(pies)
                     };
                     await fetch('/api/pieAllocations', piePayload);
@@ -963,7 +985,10 @@
                     try {
                         const piePayload = {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Auth-Token': token
+                            },
                             body: JSON.stringify(pies)
                         };
                         await fetch('/api/pieAllocations', piePayload);
@@ -987,8 +1012,12 @@
 
             async function loadSavedData() {
                 try {
-                    const pieResponse = await fetch('/api/pieAllocations');
-                    const historyResponse = await fetch('/api/yieldHistory');
+                    const pieResponse = await fetch('/api/pieAllocations', {
+                        headers: { 'X-Auth-Token': token }
+                    });
+                    const historyResponse = await fetch('/api/yieldHistory', {
+                        headers: { 'X-Auth-Token': token }
+                    });
 
                     if (pieResponse.ok) {
                         const pieResult = await pieResponse.json();
