@@ -32,7 +32,7 @@ app.post('/api/auth', async (req, res) => {
     try {
         // Simple registration/login: create user if hash is new
         await sql`INSERT INTO users (password_hash) VALUES (${passwordHash}) ON CONFLICT (password_hash) DO NOTHING`;
-        const { rows } = await sql`SELECT id FROM users WHERE password_hash = ${passwordHash}`;
+        const { rows } = await sql`SELECT password_hash FROM users WHERE password_hash = ${passwordHash}`;
         // Return the hash as the token (in a real app, this would be a JWT)
         res.json({ token: rows[0].password_hash });
     } catch (error) {
