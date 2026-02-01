@@ -307,22 +307,18 @@
 <div id="menu">
     <a href="index.html">Home</a>
     <a href="tracker.html">My Tracker</a>
-    <button onclick="showAccountModal()">Switch Account / Portfolio</button>
+    <button onclick="showAccountModal()">Switch Portfolio Account</button>
 </div>
 
 <!-- ACCOUNT MODAL -->
 <div id="accountModal" class="overlay">
     <div class="modal">
         <div class="modal-head"><h2>Portfolio Account</h2><button class="modal-close" onclick="hideAccountModal()">✕</button></div>
-        <p>Enter an account name to load your private data. If you have an old password, enter it below to see your existing data.</p>
-        <div class="field"><div class="field-row"><input type="text" id="accInput" class="fn" placeholder="Account Name / Old Password" onkeypress="if(event.key==='Enter')setAccount()"></div></div>
-        <div class="field" style="display:flex; align-items:center; gap:8px; margin-bottom:18px; cursor:pointer;" onclick="const cb=document.getElementById('accOld'); cb.checked=!cb.checked;">
-            <input type="checkbox" id="accOld" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation();">
-            <label style="margin-bottom:0; cursor:pointer; text-transform:none; font-size:13px; letter-spacing:normal;">This is an old password</label>
-        </div>
+        <p>Enter an account name to load your private data. <br><br><b>Important:</b> If you had data before this update, enter <b>legacy</b> as the account name to restore it.</p>
+        <div class="field"><div class="field-row"><input type="text" id="accInput" class="fn" placeholder="e.g. MyPortfolio or legacy" onkeypress="if(event.key==='Enter')setAccount()"></div></div>
         <div id="accMsg" style="font-size:12px; color:var(--green); margin-bottom:10px; display:none"></div>
         <div class="btn-row">
-            <button class="btn-primary" onclick="setAccount()">Load Portfolio</button>
+            <button class="btn-primary" onclick="setAccount()">Load Account</button>
             <button class="btn-ghost" onclick="hideAccountModal()">Cancel</button>
         </div>
     </div>
@@ -406,7 +402,7 @@
 
 <script>
 let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, includeTopUp = true, editingId = null;
-let accountKey = localStorage.getItem('divTrackerAccountKey') || 'default';
+let accountKey = localStorage.getItem('divTracker_accountKey') || 'default';
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -431,6 +427,8 @@ async function load() {
             combinedGoal3Name = j.data.combinedGoal3Name || '';
             combinedTopUp = j.data.combinedTopUp || 0;
             includeTopUp = j.data.includeTopUp !== undefined ? j.data.includeTopUp : true;
+        } else {
+            portfolios = []; combinedGoal = 0; combinedGoalName = ''; combinedGoal2 = 0; combinedGoal2Name = ''; combinedGoal3 = 0; combinedGoal3Name = ''; combinedTopUp = 0;
         }
     } catch(e){ console.error(e); }
 }
@@ -458,15 +456,10 @@ document.addEventListener('click', e => {
 function showAccountModal(){ document.getElementById('menu').classList.remove('open'); document.getElementById('accountModal').classList.add('open'); document.getElementById('accInput').value = (accountKey === 'default' ? '' : accountKey); setTimeout(()=>document.getElementById('accInput').focus(),50); }
 function hideAccountModal(){ document.getElementById('accountModal').classList.remove('open'); }
 async function setAccount(){
-    let val = document.getElementById('accInput').value.trim();
-    if (!val) val = 'default';
-
-    if (document.getElementById('accOld').checked && val !== 'default') {
-        val = CryptoJS.SHA256(val).toString();
-    }
-
+    const val = document.getElementById('accInput').value.trim();
+    if (!val) return;
     accountKey = val;
-    localStorage.setItem('divTrackerAccountKey', accountKey);
+    localStorage.setItem('divTracker_accountKey', accountKey);
     hideAccountModal();
     await load();
     render();
@@ -631,7 +624,7 @@ function ring(pct, sz, sw){
 function render(){
     if (accountKey === 'default' && portfolios.length === 0) {
         document.getElementById('combined').innerHTML = '';
-        document.getElementById('cards').innerHTML = '<div class="empty"><div class="ei">📈</div><p>Welcome to DivTrack! Your data is private to this browser. <br><br> <span class="hl" style="cursor:pointer" onclick="showAccountModal()">Load an existing account</span> or tap <b>+ Add</b> to start.</p></div>';
+        document.getElementById('cards').innerHTML = '<div class="empty"><div class="ei">📈</div><p>Welcome to DivTrack! Your data is private and isolated by account name. <br><br> <span style="color:var(--green); font-weight:700;">Data missing?</span> If you had data before this update (including Feb 2026), tap the menu and choose <b>Switch Portfolio Account</b>, then enter <b>legacy</b> as the name.</p></div>';
     } else {
         renderCombined();
         renderCards();

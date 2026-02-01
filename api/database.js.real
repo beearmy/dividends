@@ -1,0 +1,55 @@
+const { sql } = require('@vercel/postgres');
+
+async function createTables() {
+    try {
+        const tables = ['dividend_data', 'pie_allocations', 'yield_history', 'portfolio_data'];
+
+        // 1. Ensure tables exist with basic schema first
+        await sql`CREATE TABLE IF NOT EXISTS dividend_data (id SERIAL PRIMARY KEY, data JSONB)`;
+        await sql`CREATE TABLE IF NOT EXISTS pie_allocations (id SERIAL PRIMARY KEY, data JSONB)`;
+        await sql`CREATE TABLE IF NOT EXISTS yield_history (id SERIAL PRIMARY KEY, data JSONB)`;
+        await sql`CREATE TABLE IF NOT EXISTS portfolio_data (id SERIAL PRIMARY KEY, data JSONB)`;
+
+        // 2. Add account_key column if missing
+        for (const table of tables) {
+            try {
+                await sql.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS account_key TEXT`);
+            } catch (e) {}
+        }
+
+        // 3. Migration: Move existing unkeyed data to 'legacy' account.
+        // We do this row by row to avoid unique constraint issues if multiple rows exist.
+        for (const table of tables) {
+            try {
+                // Find rows with no account_key
+                const { rows } = await sql.query(`SELECT id FROM ${table} WHERE account_key IS NULL ORDER BY id ASC`);
+                if (rows.length > 0) {
+                    // Set the first one to 'legacy'
+                    await sql.query(`UPDATE ${table} SET account_key = 'legacy' WHERE id = $1`, [rows[0].id]);
+                    // Set others to a unique temporary key to avoid collision, or just delete them if they are unwanted
+                    for (let i = 1; i < rows.length; i++) {
+                        await sql.query(`UPDATE ${table} SET account_key = $1 WHERE id = $2`, [`old_data_${rows[i].id}`, rows[i].id]);
+                    }
+                }
+            } catch (e) {
+                console.error(`Migration error for ${table}:`, e);
+            }
+        }
+
+        // 4. Add unique constraint now that data is keyed
+        for (const table of tables) {
+            try {
+                await sql.query(`ALTER TABLE ${table} ADD CONSTRAINT ${table}_account_key_unique UNIQUE (account_key)`);
+            } catch (e) {}
+        }
+
+        console.log('Database tables verified and migration logic applied.');
+    } catch (error) {
+        console.error('Error setting up the database:', error);
+        throw error;
+    }
+}
+
+createTables();
+
+module.exports = { sql };
