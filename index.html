@@ -354,6 +354,7 @@
     <div class="modal">
         <div class="modal-head"><h2>Combined Annual Goal</h2><button class="modal-close" onclick="close('goalModal')">✕</button></div>
         <p>This goal spans all portfolios combined. Each portfolio can also have its own individual goal.</p>
+        <div class="field"><label>Goal Name</label><div class="field-row"><input type="text" id="g-name" class="fn" placeholder="e.g. Financial Freedom"></div></div>
         <div class="field"><label>Combined Annual Dividend Goal</label><div class="field-row"><span class="fx">£</span><input type="text" id="g-input" class="fi" placeholder="10000"></div></div>
         <div id="g-btns" class="btn-row"></div>
     </div>
@@ -372,7 +373,7 @@
 </div>
 
 <script>
-let portfolios = [], combinedGoal = 0, editingId = null;
+let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', editingId = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -385,14 +386,20 @@ async function load() {
     try {
         const r = await fetch('/api/portfolioData');
         const j = await r.json();
-        if (j.data) { portfolios = j.data.portfolios || []; combinedGoal = j.data.combinedGoal || 0; }
+        if (j.data) {
+            portfolios = j.data.portfolios || [];
+            combinedGoal = j.data.combinedGoal || 0;
+            combinedGoalName = j.data.combinedGoalName || '';
+            combinedGoal2 = j.data.combinedGoal2 || 0;
+            combinedGoal2Name = j.data.combinedGoal2Name || '';
+        }
     } catch(e){ console.error(e); }
 }
 async function save() {
     try {
         await fetch('/api/portfolioData', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ portfolios, combinedGoal })
+            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name })
         });
     } catch(e){ console.error(e); }
 }
@@ -467,15 +474,36 @@ function doEdit(){
 function del(id){ portfolios=portfolios.filter(p=>p.id!==id); save(); render(); }
 
 // ── GOAL MODAL ───────────────────────────────────────────────────────────────
-function openGoalModal(){
-    document.getElementById('g-input').value=combinedGoal>0?String(combinedGoal):'';
-    const b=document.getElementById('g-btns');
-    b.innerHTML = (combinedGoal>0 ? '<button class="btn-ghost" onclick="removeGoal()">Remove</button>' : '') +
+let editingGoalNum = 1;
+function openGoalModal(num = 1){
+    editingGoalNum = num;
+    const gVal = num === 1 ? combinedGoal : combinedGoal2;
+    const gName = num === 1 ? combinedGoalName : combinedGoal2Name;
+    document.getElementById('g-input').value = gVal > 0 ? String(gVal) : '';
+    document.getElementById('g-name').value = gName || '';
+    document.querySelector('#goalModal h2').innerText = num === 1 ? "Combined Annual Goal" : "Second Combined Goal";
+    const b = document.getElementById('g-btns');
+    b.innerHTML = (gVal > 0 ? '<button class="btn-ghost" onclick="removeGoal()">Remove</button>' : '') +
         '<button class="btn-primary" style="margin-top:0;flex:1" onclick="doGoal()">Save Goal</button>';
-    open('goalModal'); setTimeout(()=>document.getElementById('g-input').focus(),50);
+    open('goalModal'); setTimeout(()=>document.getElementById('g-name').focus(),50);
 }
-function doGoal(){ combinedGoal=num(document.getElementById('g-input').value); close('goalModal'); save(); render(); }
-function removeGoal(){ combinedGoal=0; close('goalModal'); save(); render(); }
+function doGoal(){
+    const val = num(document.getElementById('g-input').value);
+    const gName = document.getElementById('g-name').value.trim();
+    if (editingGoalNum === 1) { combinedGoal = val; combinedGoalName = gName; }
+    else { combinedGoal2 = val; combinedGoal2Name = gName; }
+    close('goalModal'); save(); render();
+}
+function removeGoal(){
+    if (editingGoalNum === 1) {
+        combinedGoal = combinedGoal2;
+        combinedGoalName = combinedGoal2Name;
+        combinedGoal2 = 0;
+        combinedGoal2Name = '';
+    }
+    else { combinedGoal2 = 0; combinedGoal2Name = ''; }
+    close('goalModal'); save(); render();
+}
 
 // ── RING ─────────────────────────────────────────────────────────────────────
 function ring(pct, sz, sw){
@@ -492,38 +520,57 @@ function ring(pct, sz, sw){
 // ── RENDER ───────────────────────────────────────────────────────────────────
 function render(){ renderCombined(); renderCards(); }
 
+function getGoalBlock(goal, name, totA, avg) {
+    if (goal <= 0) return '';
+    const pct=(totA/goal)*100, done=totA>=goal;
+    let html='<div class="goal-box'+(done?' done':'')+'">';
+    if(name) html += '<div style="text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">' + name + '</div>';
+    html += ring(pct,130,12)+
+        '<div class="g-prog"><span class="gv">'+fmt(totA)+'</span> / '+fmt(goal)+'</div>';
+    if(!done){
+        const need=avg>0?(goal-totA)/(avg/100):0;
+        html+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at your average yield to reach your goal</div>';
+        if(avg > 0 && totA > 0) {
+            const r = Math.pow(1 + avg / 100, 1 / 12) - 1;
+            const mReq = Math.ceil(Math.log(goal / totA) / Math.log(1 + r));
+            let tStr = "";
+            if (mReq < 13) {
+                tStr = mReq + " month" + (mReq !== 1 ? "s" : "");
+            } else {
+                const yrs = Math.floor(mReq / 12), mos = mReq % 12;
+                tStr = yrs + " year" + (yrs !== 1 ? "s" : "") + (mos > 0 ? " and " + mos + " month" + (mos !== 1 ? "s" : "") : "");
+            }
+            html += '<div class="g-hint" style="margin-top:10px; color:var(--text); font-weight:600; font-size:13px;">On course to reach your goal in <span class="hl" style="color:var(--green)">' + tStr + '</span> through dividend reinvestment! 🚀</div>';
+        }
+    }
+    else html+='<div class="g-done" style="font-size:14px; margin-top:12px;">Congratulations! 🍾 What’s next?</div>';
+    html+='</div>';
+    return html;
+}
+
 function renderCombined(){
     const el=document.getElementById('combined');
     if(!portfolios.length){ el.innerHTML=''; return; }
     const totA=portfolios.reduce((s,p)=>s+p.totalInvested*(p.yieldPercent/100),0);
     const totI=portfolios.reduce((s,p)=>s+p.totalInvested,0);
     const avg=totI>0?(totA/totI)*100:0;
-    let gb='';
-    if(combinedGoal>0){
-        const pct=(totA/combinedGoal)*100, done=totA>=combinedGoal;
-        gb='<div class="goal-box'+(done?' done':'')+'">'+ring(pct,130,12)+
-            '<div class="g-prog"><span class="gv">'+fmt(totA)+'</span> / '+fmt(combinedGoal)+'</div>';
-        if(!done){
-            const need=avg>0?(combinedGoal-totA)/(avg/100):0;
-            gb+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at your average yield to reach your goal</div>';
-            if(avg > 0 && totA > 0) {
-                const r = Math.pow(1 + avg / 100, 1 / 12) - 1;
-                const mReq = Math.ceil(Math.log(combinedGoal / totA) / Math.log(1 + r));
-                let tStr = "";
-                if (mReq < 13) {
-                    tStr = mReq + " month" + (mReq !== 1 ? "s" : "");
-                } else {
-                    const yrs = Math.floor(mReq / 12), mos = mReq % 12;
-                    tStr = yrs + " year" + (yrs !== 1 ? "s" : "") + (mos > 0 ? " " + mos + " month" + (mos !== 1 ? "s" : "") : "");
-                }
-                gb += '<div class="g-hint" style="margin-top:10px; color:var(--text); font-weight:600; font-size:13px;">On course to reach your goal in <span class="hl" style="color:var(--green)">' + tStr + '</span> through dividend reinvestment! 🚀</div>';
-            }
+
+    let gh = '';
+    if(combinedGoal > 0) {
+        gh += '<div class="c-goal-head"><span>Combined Annual Goal</span><button class="btn-goal" onclick="openGoalModal(1)">Edit Goal</button></div>';
+        gh += getGoalBlock(combinedGoal, combinedGoalName, totA, avg);
+
+        if(combinedGoal2 > 0) {
+            gh += '<div class="c-goal-head" style="margin-top:20px"><span>Second Combined Goal</span><button class="btn-goal" onclick="openGoalModal(2)">Edit Goal</button></div>';
+            gh += getGoalBlock(combinedGoal2, combinedGoal2Name, totA, avg);
+        } else {
+            gh += '<div style="margin-top:12px; text-align:center;"><button class="btn-goal" onclick="openGoalModal(2)">+ Add Second Goal</button></div>';
         }
-        else gb+='<div class="g-done" style="font-size:14px; margin-top:12px;">Congratulations! 🍾 What’s next?</div>';
-        gb+='</div>';
     } else {
-        gb='<div class="goal-empty">No combined goal set — click <span class="hl">+ Set Goal</span> above</div>';
+        gh += '<div class="c-goal-head"><span>Combined Annual Goal</span><button class="btn-goal" onclick="openGoalModal(1)">+ Set Goal</button></div>';
+        gh += '<div class="goal-empty">No combined goal set — click <span class="hl">+ Set Goal</span> above</div>';
     }
+
     el.innerHTML='<div class="combined">'+
         '<div class="c-head">'+
             '<div class="c-label">Combined Portfolio</div>'+
@@ -536,10 +583,7 @@ function renderCombined(){
                 '<div class="c-stat"><div class="cs-l">Avg Yield</div><div class="cs-v">'+avg.toFixed(2)+'%</div></div>'+
             '</div>'+
         '</div>'+
-        '<div class="c-goal-section">'+
-            '<div class="c-goal-head"><span>Combined Annual Goal</span><button class="btn-goal" onclick="openGoalModal()">'+(combinedGoal>0?'Edit Goal':'+ Set Goal')+'</button></div>'+
-            gb+
-        '</div>'+
+        '<div class="c-goal-section">'+gh+'</div>'+
     '</div>';
 }
 
