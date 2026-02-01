@@ -328,8 +328,17 @@
     <div class="modal">
         <div class="modal-head"><h2>Add Portfolio</h2><button class="modal-close" onclick="close('addModal')">✕</button></div>
         <div class="field"><label>Portfolio Name</label><div class="field-row"><input type="text" id="a-name" class="fn" placeholder="e.g. Main ISA"></div></div>
-        <div class="field"><label>Total Invested</label><div class="field-row"><span class="fx">£</span><input type="text" id="a-inv" class="fi" placeholder="55000" oninput="preview('a')"></div></div>
-        <div class="field"><label>Dividend Yield</label><div class="field-row"><input type="text" id="a-yld" class="fn" placeholder="8.18" oninput="preview('a')"><span class="sx">%</span></div></div>
+        <div class="field" style="display:flex; align-items:center; gap:8px; margin-bottom:18px; cursor:pointer;" onclick="const cb=document.getElementById('a-fixed'); cb.checked=!cb.checked; toggleFixed('a')">
+            <input type="checkbox" id="a-fixed" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); toggleFixed('a')">
+            <label style="margin-bottom:0; cursor:pointer; text-transform:none; font-size:13px; letter-spacing:normal;">Fixed Annual Dividend</label>
+        </div>
+        <div id="a-std-fields">
+            <div class="field"><label>Total Invested</label><div class="field-row"><span class="fx">£</span><input type="text" id="a-inv" class="fi" placeholder="55000" oninput="preview('a')"></div></div>
+            <div class="field"><label>Dividend Yield</label><div class="field-row"><input type="text" id="a-yld" class="fn" placeholder="8.18" oninput="preview('a')"><span class="sx">%</span></div></div>
+        </div>
+        <div id="a-fixed-fields" style="display:none">
+            <div class="field"><label>Annual Dividend</label><div class="field-row"><span class="fx">£</span><input type="text" id="a-fix-val" class="fi" placeholder="120" oninput="preview('a')"></div></div>
+        </div>
         <div class="field"><label>Annual Goal (optional)</label><div class="field-row"><span class="fx">£</span><input type="text" id="a-goal" class="fi" placeholder="6000"></div></div>
         <div id="a-prev" class="preview"></div>
         <button class="btn-primary" onclick="doAdd()">Add Portfolio</button>
@@ -341,8 +350,17 @@
     <div class="modal">
         <div class="modal-head"><h2>Edit Portfolio</h2><button class="modal-close" onclick="close('editModal')">✕</button></div>
         <div class="field"><label>Portfolio Name</label><div class="field-row"><input type="text" id="e-name" class="fn" placeholder="e.g. Main ISA"></div></div>
-        <div class="field"><label>Total Invested</label><div class="field-row"><span class="fx">£</span><input type="text" id="e-inv" class="fi" placeholder="55000" oninput="preview('e')"></div></div>
-        <div class="field"><label>Dividend Yield</label><div class="field-row"><input type="text" id="e-yld" class="fn" placeholder="8.18" oninput="preview('e')"><span class="sx">%</span></div></div>
+        <div class="field" style="display:flex; align-items:center; gap:8px; margin-bottom:18px; cursor:pointer;" onclick="const cb=document.getElementById('e-fixed'); cb.checked=!cb.checked; toggleFixed('e')">
+            <input type="checkbox" id="e-fixed" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); toggleFixed('e')">
+            <label style="margin-bottom:0; cursor:pointer; text-transform:none; font-size:13px; letter-spacing:normal;">Fixed Annual Dividend</label>
+        </div>
+        <div id="e-std-fields">
+            <div class="field"><label>Total Invested</label><div class="field-row"><span class="fx">£</span><input type="text" id="e-inv" class="fi" placeholder="55000" oninput="preview('e')"></div></div>
+            <div class="field"><label>Dividend Yield</label><div class="field-row"><input type="text" id="e-yld" class="fn" placeholder="8.18" oninput="preview('e')"><span class="sx">%</span></div></div>
+        </div>
+        <div id="e-fixed-fields" style="display:none">
+            <div class="field"><label>Annual Dividend</label><div class="field-row"><span class="fx">£</span><input type="text" id="e-fix-val" class="fi" placeholder="120" oninput="preview('e')"></div></div>
+        </div>
         <div class="field"><label>Annual Goal (optional)</label><div class="field-row"><span class="fx">£</span><input type="text" id="e-goal" class="fi" placeholder="6000"></div></div>
         <div id="e-prev" class="preview"></div>
         <button class="btn-primary" onclick="doEdit()">Save Changes</button>
@@ -435,11 +453,23 @@ function close(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); }));
 
 // ── PREVIEW ──────────────────────────────────────────────────────────────────
+function toggleFixed(p) {
+    const isFixed = document.getElementById(p + '-fixed').checked;
+    document.getElementById(p + '-std-fields').style.display = isFixed ? 'none' : 'block';
+    document.getElementById(p + '-fixed-fields').style.display = isFixed ? 'block' : 'none';
+    preview(p);
+}
 function preview(p){
-    const inv=num(document.getElementById(p+'-inv').value), yld=num(document.getElementById(p+'-yld').value);
+    const isF=document.getElementById(p+'-fixed').checked;
+    let a=0;
+    if (isF) {
+        a = num(document.getElementById(p+'-fix-val').value);
+    } else {
+        const inv=num(document.getElementById(p+'-inv').value), yld=num(document.getElementById(p+'-yld').value);
+        a=inv*(yld/100);
+    }
     const el=document.getElementById(p+'-prev');
-    if(!inv||!yld){ el.classList.remove('show'); return; }
-    const a=inv*(yld/100);
+    if(a <= 0){ el.classList.remove('show'); return; }
     el.classList.add('show');
     el.innerHTML='<div><div class="p-label">Annual</div><div class="p-val hi">'+fmt(a)+'</div></div>'+
         '<div><div class="p-label">Monthly</div><div class="p-val">'+fmt(a/12)+'</div></div>'+
@@ -449,14 +479,24 @@ function preview(p){
 
 // ── ADD ──────────────────────────────────────────────────────────────────────
 function openAdd(){
-    ['a-name','a-inv','a-yld','a-goal'].forEach(i=>document.getElementById(i).value='');
+    ['a-name','a-inv','a-yld','a-fix-val','a-goal'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('a-fixed').checked = false;
+    toggleFixed('a');
     document.getElementById('a-prev').classList.remove('show');
     open('addModal'); setTimeout(()=>document.getElementById('a-name').focus(),50);
 }
 function doAdd(){
-    const n=document.getElementById('a-name').value.trim(), i=num(document.getElementById('a-inv').value), y=num(document.getElementById('a-yld').value), g=num(document.getElementById('a-goal').value);
-    if(!n||!i||!y) return;
-    portfolios.push({id:nid(), name:n, totalInvested:i, yieldPercent:y, goal:g});
+    const n=document.getElementById('a-name').value.trim(), isF=document.getElementById('a-fixed').checked, g=num(document.getElementById('a-goal').value);
+    let i=0, y=0, fv=0;
+    if (isF) {
+        fv = num(document.getElementById('a-fix-val').value);
+        if (!n || !fv) return;
+    } else {
+        i=num(document.getElementById('a-inv').value);
+        y=num(document.getElementById('a-yld').value);
+        if(!n||!i||!y) return;
+    }
+    portfolios.push({id:nid(), name:n, totalInvested:i, yieldPercent:y, isFixed:isF, fixedDividend:fv, goal:g});
     close('addModal'); save(); render();
 }
 
@@ -465,21 +505,40 @@ function openEdit(id){
     editingId=id;
     const p=portfolios.find(x=>x.id===id);
     document.getElementById('e-name').value=p.name;
-    document.getElementById('e-inv').value=String(p.totalInvested);
-    document.getElementById('e-yld').value=String(p.yieldPercent);
+    document.getElementById('e-fixed').checked = !!p.isFixed;
+    document.getElementById('e-inv').value=p.totalInvested ? String(p.totalInvested) : '';
+    document.getElementById('e-yld').value=p.yieldPercent ? String(p.yieldPercent) : '';
+    document.getElementById('e-fix-val').value=p.fixedDividend ? String(p.fixedDividend) : '';
     document.getElementById('e-goal').value=p.goal?String(p.goal):'';
-    preview('e'); open('editModal'); setTimeout(()=>document.getElementById('e-name').focus(),50);
+    toggleFixed('e');
+    open('editModal'); setTimeout(()=>document.getElementById('e-name').focus(),50);
 }
 function doEdit(){
-    const n=document.getElementById('e-name').value.trim(), i=num(document.getElementById('e-inv').value), y=num(document.getElementById('e-yld').value), g=num(document.getElementById('e-goal').value);
-    if(!n||!i||!y) return;
+    const n=document.getElementById('e-name').value.trim(), isF=document.getElementById('e-fixed').checked, g=num(document.getElementById('e-goal').value);
+    let i=0, y=0, fv=0;
+    if (isF) {
+        fv = num(document.getElementById('e-fix-val').value);
+        if (!n || !fv) return;
+    } else {
+        i=num(document.getElementById('e-inv').value);
+        y=num(document.getElementById('e-yld').value);
+        if(!n||!i||!y) return;
+    }
     const p=portfolios.find(x=>x.id===editingId);
-    if(p){ p.name=n; p.totalInvested=i; p.yieldPercent=y; p.goal=g; }
+    if(p){
+        p.name=n; p.totalInvested=i; p.yieldPercent=y;
+        p.isFixed=isF; p.fixedDividend=fv; p.goal=g;
+    }
     close('editModal'); save(); render();
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
-function del(id){ portfolios=portfolios.filter(p=>p.id!==id); save(); render(); }
+function del(id){
+    const p = portfolios.find(x => x.id === id);
+    if (confirm(`Are you sure you want to delete the portfolio "${p.name}"?`)) {
+        portfolios=portfolios.filter(p=>p.id!==id); save(); render();
+    }
+}
 
 // ── GOAL MODAL ───────────────────────────────────────────────────────────────
 let editingGoalNum = 1;
@@ -575,7 +634,7 @@ function getGoalBlock(goal, name, totA, avg, topUp = 0) {
 function renderCombined(){
     const el=document.getElementById('combined');
     if(!portfolios.length){ el.innerHTML=''; return; }
-    const totA=portfolios.reduce((s,p)=>s+p.totalInvested*(p.yieldPercent/100),0);
+    const totA=portfolios.reduce((s,p)=>s+(p.isFixed ? p.fixedDividend : p.totalInvested*(p.yieldPercent/100)),0);
     const totI=portfolios.reduce((s,p)=>s+p.totalInvested,0);
     const avg=totI>0?(totA/totI)*100:0;
 
@@ -632,14 +691,17 @@ function renderCards(){
     const el=document.getElementById('cards');
     if(!portfolios.length){ el.innerHTML='<div class="empty"><div class="ei">📈</div><p>No portfolios yet. Tap <span class="hl">+ Add</span> to get started.</p></div>'; return; }
     el.innerHTML=portfolios.map(p=>{
-        const a=p.totalInvested*(p.yieldPercent/100), g=p.goal||0;
+        const a=p.isFixed ? p.fixedDividend : p.totalInvested*(p.yieldPercent/100), g=p.goal||0;
         let gs='';
         if(g>0){
             const pct=(a/g)*100, done=a>=g;
             gs='<div class="card-goal'+(done?' done':'')+'">'+
                 '<div class="card-goal-label">Annual Goal</div>'+ring(pct,110,10)+
                 '<div class="g-prog"><span class="gv">'+fmt(a)+'</span> / '+fmt(g)+'</div>';
-            if(!done){ gs+='<div class="g-hint">Invest <span class="hl">'+fmt((g-a)/(p.yieldPercent/100))+'</span> more at current yield to hit goal</div>'; }
+            if(!done){
+                const need = p.isFixed ? 0 : (g-a)/(p.yieldPercent/100);
+                if (need > 0) gs+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at current yield to hit goal</div>';
+            }
             else gs+='<div class="g-done">🎉 Goal achieved! Earning '+fmt(a-g)+' above target</div>';
             gs+='</div>';
         }
@@ -649,11 +711,11 @@ function renderCards(){
                 '<div class="card-acts"><button class="btn-icon" onclick="openEdit('+p.id+')">✏️</button><button class="btn-icon del" onclick="del('+p.id+')">🗑️</button></div>'+
             '</div>'+
             '<div class="card-stats">'+
-                '<div class="s-row"><span class="sl">Invested</span><span class="sv">'+fmt(p.totalInvested)+'</span></div>'+
+                (p.isFixed ? '' : '<div class="s-row"><span class="sl">Invested</span><span class="sv">'+fmt(p.totalInvested)+'</span></div>')+
                 '<div class="s-row"><span class="sl">Monthly</span><span class="sv">'+fmt(a/12)+'</span></div>'+
                 '<div class="s-row"><span class="sl">Daily</span><span class="sv">'+fmt2(a/365)+'</span></div>'+
                 '<div class="s-row"><span class="sl">Hourly</span><span class="sv">'+fmt2(a/WH)+'</span></div>'+
-                '<div class="s-row"><span class="sl">Yield</span><span class="sv">'+p.yieldPercent.toFixed(2)+'%</span></div>'+
+                (p.isFixed ? '' : '<div class="s-row"><span class="sl">Yield</span><span class="sv">'+p.yieldPercent.toFixed(2)+'%</span></div>')+
             '</div>'+gs+
         '</div>';
     }).join('');
