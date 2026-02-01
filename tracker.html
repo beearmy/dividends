@@ -54,7 +54,7 @@
             <a href="tracker.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
                 My Tracker
             </a>
-            <button onclick="logout()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+            <button onclick="switchAccount()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
                 Switch Account
             </button>
         </div>
@@ -220,9 +220,8 @@
     <script>
         const accountKey = localStorage.getItem('divTrackerAccountKey') || 'default';
 
-        function logout() {
-            // "Logout" now just means go back to default
-            localStorage.setItem('divTrackerAccountKey', 'default');
+        function switchAccount() {
+            // Go back to home to switch
             window.location.href = 'index.html';
         }
 
