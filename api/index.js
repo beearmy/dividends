@@ -1,157 +1,134 @@
 const express = require('express');
-const { sql } = require('./database.js');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path');
+const { sql } = require('./database');
 
 const app = express();
-
-// Serve static files from the root directory
-app.use(express.static(path.join(__dirname, '..')));
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
 
 // Helper to get account key from headers
-function getAccountKey(req) {
-    // If no key is provided, use "default"
-    return req.headers['x-account-key'] || req.get('X-Account-Key') || 'default';
-}
+const getAccountKey = (req) => req.headers['x-account-key'] || 'default';
 
-// Endpoints for dividend_data
-app.get('/api/dividendData', async (req, res) => {
-    const key = getAccountKey(req);
-    try {
-        const { rows } = await sql`SELECT data FROM dividend_data WHERE account_key = ${key}`;
-        res.json({
-            "message": "success",
-            "data": rows[0] ? rows[0].data : {}
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/dividendData', async (req, res) => {
-    const key = getAccountKey(req);
-    const data = req.body;
-    try {
-        const result = await sql`
-            INSERT INTO dividend_data (account_key, data)
-            VALUES (${key}, ${JSON.stringify(data)})
-            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
-        `;
-        res.json({
-            "message": "success",
-            "rows_affected": result.rowCount
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Endpoints for portfolio_data
+// ── Portfolio Data Endpoints ────────────────────────────────────────────────
 app.get('/api/portfolioData', async (req, res) => {
     const key = getAccountKey(req);
     try {
         const { rows } = await sql`SELECT data FROM portfolio_data WHERE account_key = ${key}`;
-        res.json({
-            "message": "success",
-            "data": rows[0] ? rows[0].data : { portfolios: [], combinedGoal: 0 }
-        });
+        res.json(rows.length > 0 ? { data: rows[0].data } : { data: null });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 app.post('/api/portfolioData', async (req, res) => {
     const key = getAccountKey(req);
-    const data = req.body;
+    const { portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, includeTopUp } = req.body;
+    const data = { portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, includeTopUp };
+
     try {
-        const result = await sql`
+        await sql`
             INSERT INTO portfolio_data (account_key, data)
             VALUES (${key}, ${JSON.stringify(data)})
-            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
+            ON CONFLICT (account_key)
+            DO UPDATE SET data = EXCLUDED.data;
         `;
-        res.json({
-            "message": "success",
-            "rows_affected": result.rowCount
-        });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Endpoints for pie_allocations
+// ── Dividend Data Endpoints ─────────────────────────────────────────────────
+app.get('/api/dividendData', async (req, res) => {
+    const key = getAccountKey(req);
+    try {
+        const { rows } = await sql`SELECT data FROM dividend_data WHERE account_key = ${key}`;
+        res.json(rows.length > 0 ? { data: rows[0].data } : { data: null });
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/dividendData', async (req, res) => {
+    const key = getAccountKey(req);
+    try {
+        await sql`
+            INSERT INTO dividend_data (account_key, data)
+            VALUES (${key}, ${JSON.stringify(req.body)})
+            ON CONFLICT (account_key)
+            DO UPDATE SET data = EXCLUDED.data;
+        `;
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Pie Allocations Endpoints ───────────────────────────────────────────────
 app.get('/api/pieAllocations', async (req, res) => {
     const key = getAccountKey(req);
     try {
         const { rows } = await sql`SELECT data FROM pie_allocations WHERE account_key = ${key}`;
-        res.json({
-            "message": "success",
-            "data": rows[0] ? rows[0].data : []
-        });
+        res.json(rows.length > 0 ? { data: rows[0].data } : { data: null });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 app.post('/api/pieAllocations', async (req, res) => {
     const key = getAccountKey(req);
-    const data = req.body;
     try {
-        const result = await sql`
+        await sql`
             INSERT INTO pie_allocations (account_key, data)
-            VALUES (${key}, ${JSON.stringify(data)})
-            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
+            VALUES (${key}, ${JSON.stringify(req.body)})
+            ON CONFLICT (account_key)
+            DO UPDATE SET data = EXCLUDED.data;
         `;
-        res.json({
-            "message": "success",
-            "rows_affected": result.rowCount
-        });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Endpoints for yield_history
+// ── Yield History Endpoints ─────────────────────────────────────────────────
 app.get('/api/yieldHistory', async (req, res) => {
     const key = getAccountKey(req);
     try {
         const { rows } = await sql`SELECT data FROM yield_history WHERE account_key = ${key}`;
-        res.json({
-            "message": "success",
-            "data": rows[0] ? rows[0].data : []
-        });
+        res.json(rows.length > 0 ? { data: rows[0].data } : { data: null });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 app.post('/api/yieldHistory', async (req, res) => {
     const key = getAccountKey(req);
-    const data = req.body;
     try {
-        const result = await sql`
+        await sql`
             INSERT INTO yield_history (account_key, data)
-            VALUES (${key}, ${JSON.stringify(data)})
-            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
+            VALUES (${key}, ${JSON.stringify(req.body)})
+            ON CONFLICT (account_key)
+            DO UPDATE SET data = EXCLUDED.data;
         `;
-        res.json({
-            "message": "success",
-            "rows_affected": result.rowCount
-        });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Database error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-module.exports = app;
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
 
-// Start the server for local testing
-if (require.main === module) {
-  const port = process.env.PORT || 3000;
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
-}
+module.exports = app;

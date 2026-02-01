@@ -1,22 +1,23 @@
 # Dividend Income Tracker
 
-A professional dividend income tracking dashboard with private portfolio access, year-over-year comparisons, and visualizations.
+A professional dividend income tracking dashboard with password-protected access, year-over-year comparisons, and visualizations.
 
 ## Features
 
-- 🏠 Home page with summary dashboard
+- 🏠 Public landing page
+- 🔒 Password-protected tracker
 - 📊 Interactive table view with color-coded performance
 - 📈 Chart view with historical data
 - 💰 Key statistics dashboard
-- 💾 Private data accounts (multi-tenant)
+- 💾 Data is now available across devices
 - 🎨 Professional dark theme
 - 📱 Fully responsive design
 - 🍔 Hamburger navigation menu
 
 ## Pages
 
-1. **index.html** - Main dashboard and portfolio overview
-2. **tracker.html** - Detailed monthly dividend tracker
+1. **index.html** - Public landing page
+2. **tracker.html** - Password-protected dividend tracker
 
 ## Deploy to Vercel (Easy Steps)
 
@@ -48,13 +49,17 @@ A professional dividend income tracking dashboard with private portfolio access,
 4. Drag and drop the entire folder
 5. Your site is live!
 
-## Account Management
+## Setup Your Password
 
-The application uses an "Account Name" system to keep your portfolios private. Simply go to the menu and select "Switch Account / Portfolio" to enter a unique name. Your data will be isolated to that specific name.
+To set your own password, edit `index.html` and find this line:
+```javascript
+const correctPassword = 'YOUR_PASSWORD_HERE';
+```
+Replace `'YOUR_PASSWORD_HERE'` with your desired password.
 
 ## Data Management
 
-The application uses a Vercel Postgres database to store your data, making it available across all your devices.
+The application now uses a Vercel Postgres database to store your data, making it available across all your devices.
 
 ## Backend and Database
 
@@ -73,9 +78,9 @@ This project uses a Node.js backend with a Vercel Postgres database.
 3.  **Set Environment Variables:**
     *   Vercel will automatically set the necessary environment variables for you when you connect the database. These include `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_USER`, `POSTGRES_HOST`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE`. The application will use these to connect to the database.
 
-## Privacy Note
+## Security Note
 
-Data is segregated by account name. While this provides privacy for multiple users, it does not use encryption for your portfolio data.
+This uses client-side password protection, which is suitable for basic privacy but not for sensitive data. For production use with sensitive information, implement server-side authentication.
 
 ## License
 
