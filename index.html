@@ -373,7 +373,7 @@
 </div>
 
 <script>
-let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', editingId = null;
+let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', editingId = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -392,6 +392,8 @@ async function load() {
             combinedGoalName = j.data.combinedGoalName || '';
             combinedGoal2 = j.data.combinedGoal2 || 0;
             combinedGoal2Name = j.data.combinedGoal2Name || '';
+            combinedGoal3 = j.data.combinedGoal3 || 0;
+            combinedGoal3Name = j.data.combinedGoal3Name || '';
         }
     } catch(e){ console.error(e); }
 }
@@ -399,7 +401,7 @@ async function save() {
     try {
         await fetch('/api/portfolioData', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name })
+            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name })
         });
     } catch(e){ console.error(e); }
 }
@@ -477,11 +479,14 @@ function del(id){ portfolios=portfolios.filter(p=>p.id!==id); save(); render(); 
 let editingGoalNum = 1;
 function openGoalModal(num = 1){
     editingGoalNum = num;
-    const gVal = num === 1 ? combinedGoal : combinedGoal2;
-    const gName = num === 1 ? combinedGoalName : combinedGoal2Name;
+    let gVal, gName, gTitle;
+    if (num === 1) { gVal = combinedGoal; gName = combinedGoalName; gTitle = "Combined Annual Goal"; }
+    else if (num === 2) { gVal = combinedGoal2; gName = combinedGoal2Name; gTitle = "Second Combined Goal"; }
+    else { gVal = combinedGoal3; gName = combinedGoal3Name; gTitle = "Third Combined Goal"; }
+
     document.getElementById('g-input').value = gVal > 0 ? String(gVal) : '';
     document.getElementById('g-name').value = gName || '';
-    document.querySelector('#goalModal h2').innerText = num === 1 ? "Combined Annual Goal" : "Second Combined Goal";
+    document.querySelector('#goalModal h2').innerText = gTitle;
     const b = document.getElementById('g-btns');
     b.innerHTML = (gVal > 0 ? '<button class="btn-ghost" onclick="removeGoal()">Remove</button>' : '') +
         '<button class="btn-primary" style="margin-top:0;flex:1" onclick="doGoal()">Save Goal</button>';
@@ -491,17 +496,26 @@ function doGoal(){
     const val = num(document.getElementById('g-input').value);
     const gName = document.getElementById('g-name').value.trim();
     if (editingGoalNum === 1) { combinedGoal = val; combinedGoalName = gName; }
-    else { combinedGoal2 = val; combinedGoal2Name = gName; }
+    else if (editingGoalNum === 2) { combinedGoal2 = val; combinedGoal2Name = gName; }
+    else { combinedGoal3 = val; combinedGoal3Name = gName; }
     close('goalModal'); save(); render();
 }
 function removeGoal(){
     if (editingGoalNum === 1) {
         combinedGoal = combinedGoal2;
         combinedGoalName = combinedGoal2Name;
-        combinedGoal2 = 0;
-        combinedGoal2Name = '';
+        combinedGoal2 = combinedGoal3;
+        combinedGoal2Name = combinedGoal3Name;
+        combinedGoal3 = 0;
+        combinedGoal3Name = '';
     }
-    else { combinedGoal2 = 0; combinedGoal2Name = ''; }
+    else if (editingGoalNum === 2) {
+        combinedGoal2 = combinedGoal3;
+        combinedGoal2Name = combinedGoal3Name;
+        combinedGoal3 = 0;
+        combinedGoal3Name = '';
+    }
+    else { combinedGoal3 = 0; combinedGoal3Name = ''; }
     close('goalModal'); save(); render();
 }
 
@@ -563,6 +577,13 @@ function renderCombined(){
         if(combinedGoal2 > 0) {
             gh += '<div class="c-goal-head" style="margin-top:20px"><span>Second Combined Goal</span><button class="btn-goal" onclick="openGoalModal(2)">Edit Goal</button></div>';
             gh += getGoalBlock(combinedGoal2, combinedGoal2Name, totA, avg);
+
+            if(combinedGoal3 > 0) {
+                gh += '<div class="c-goal-head" style="margin-top:20px"><span>Third Combined Goal</span><button class="btn-goal" onclick="openGoalModal(3)">Edit Goal</button></div>';
+                gh += getGoalBlock(combinedGoal3, combinedGoal3Name, totA, avg);
+            } else {
+                gh += '<div style="margin-top:12px; text-align:center;"><button class="btn-goal" onclick="openGoalModal(3)">+ Add Third Goal</button></div>';
+            }
         } else {
             gh += '<div style="margin-top:12px; text-align:center;"><button class="btn-goal" onclick="openGoalModal(2)">+ Add Second Goal</button></div>';
         }
