@@ -456,15 +456,26 @@ document.addEventListener('click', e => {
 function showPwModal(){ document.getElementById('menu').classList.remove('open'); document.getElementById('pwModal').classList.add('open'); setTimeout(()=>document.getElementById('pwInput').focus(),50); }
 function hidePwModal(){ document.getElementById('pwModal').classList.remove('open'); document.getElementById('pwInput').value=''; document.getElementById('pwErr').classList.remove('show'); }
 async function checkPw(){
-    const pw = document.getElementById('pwInput').value;
+    const pwInput = document.getElementById('pwInput');
+    const pwErr = document.getElementById('pwErr');
+    const pw = pwInput.value.trim();
     if (!pw) return;
+
+    pwErr.classList.remove('show');
     const h = CryptoJS.SHA256(pw).toString();
+
     try {
         const r = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ passwordHash: h })
         });
+
+        if (!r.ok) {
+            const errData = await r.json();
+            throw new Error(errData.error || 'Server error');
+        }
+
         const j = await r.json();
         if (j.token) {
             token = j.token;
@@ -473,13 +484,15 @@ async function checkPw(){
             await load();
             render();
         } else {
-            document.getElementById('pwErr').classList.add('show');
-            document.getElementById('pwInput').value='';
-            document.getElementById('pwInput').focus();
+            pwErr.innerText = 'Login failed. Please check your password.';
+            pwErr.classList.add('show');
+            pwInput.value = '';
+            pwInput.focus();
         }
     } catch (e) {
-        console.error(e);
-        alert('Authentication failed. Please try again.');
+        console.error('Login error:', e);
+        pwErr.innerText = 'Connection error. Please try again in a moment.';
+        pwErr.classList.add('show');
     }
 }
 function logout() {

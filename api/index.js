@@ -14,29 +14,35 @@ app.use(bodyParser.json());
 
 // Helper to get user from token (password hash)
 async function getUserId(req) {
-    const token = req.headers['x-auth-token'];
-    if (!token) return { error: 'Unauthorized', status: 401 };
+    // Normalize header access
+    const token = req.headers['x-auth-token'] || req.get('X-Auth-Token');
+    if (!token) return { error: 'Missing auth token', status: 401 };
     try {
         const { rows } = await sql`SELECT id FROM users WHERE password_hash = ${token}`;
-        if (!rows[0]) return { error: 'Invalid token', status: 401 };
+        if (!rows || rows.length === 0) return { error: 'Session expired or invalid', status: 401 };
         return { userId: rows[0].id };
     } catch (error) {
-        return { error: error.message, status: 500 };
+        console.error('Database error in getUserId:', error);
+        return { error: 'Internal server error', status: 500 };
     }
 }
 
 // Authentication endpoint
 app.post('/api/auth', async (req, res) => {
     const { passwordHash } = req.body;
-    if (!passwordHash) return res.status(400).json({ error: 'passwordHash is required' });
+    if (!passwordHash) return res.status(400).json({ error: 'Password hash is required' });
     try {
         // Simple registration/login: create user if hash is new
         await sql`INSERT INTO users (password_hash) VALUES (${passwordHash}) ON CONFLICT (password_hash) DO NOTHING`;
         const { rows } = await sql`SELECT password_hash FROM users WHERE password_hash = ${passwordHash}`;
-        // Return the hash as the token (in a real app, this would be a JWT)
+        if (!rows || rows.length === 0) {
+            return res.status(500).json({ error: 'Failed to authenticate user' });
+        }
+        // Return the hash as the token
         res.json({ token: rows[0].password_hash });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Auth error:', error);
+        res.status(500).json({ error: 'Authentication service unavailable' });
     }
 });
 

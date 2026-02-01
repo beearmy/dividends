@@ -43,17 +43,25 @@ async function createTables() {
         const { rows: userRows } = await sql`SELECT id FROM users WHERE password_hash = ${defaultHash}`;
         const defaultUserId = userRows[0].id;
 
-        // Migration: Add user_id to existing tables if it's missing
-        await sql`ALTER TABLE dividend_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
-        await sql`ALTER TABLE pie_allocations ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
-        await sql`ALTER TABLE yield_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
-        await sql`ALTER TABLE portfolio_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`;
+        // Migration: Add user_id to existing tables if it's missing.
+        // We do this individually and catch errors to ensure it doesn't block startup.
+        try { await sql`ALTER TABLE dividend_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`; } catch (e) {}
+        try { await sql`ALTER TABLE pie_allocations ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`; } catch (e) {}
+        try { await sql`ALTER TABLE yield_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`; } catch (e) {}
+        try { await sql`ALTER TABLE portfolio_data ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id)`; } catch (e) {}
 
-        // Update existing rows that have NULL user_id to belong to the default user
-        await sql`UPDATE dividend_data SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
-        await sql`UPDATE pie_allocations SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
-        await sql`UPDATE yield_history SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
-        await sql`UPDATE portfolio_data SET user_id = ${defaultUserId} WHERE user_id IS NULL`;
+        // Ensure unique constraint on user_id for UPSERT to work.
+        try { await sql`ALTER TABLE dividend_data ADD CONSTRAINT div_user_unique UNIQUE (user_id)`; } catch (e) {}
+        try { await sql`ALTER TABLE pie_allocations ADD CONSTRAINT pie_user_unique UNIQUE (user_id)`; } catch (e) {}
+        try { await sql`ALTER TABLE yield_history ADD CONSTRAINT yield_user_unique UNIQUE (user_id)`; } catch (e) {}
+        try { await sql`ALTER TABLE portfolio_data ADD CONSTRAINT port_user_unique UNIQUE (user_id)`; } catch (e) {}
+
+        // Update existing rows that have NULL user_id to belong to the default user.
+        // We only update if the user doesn't already have a row.
+        await sql`UPDATE dividend_data SET user_id = ${defaultUserId} WHERE user_id IS NULL AND NOT EXISTS (SELECT 1 FROM dividend_data WHERE user_id = ${defaultUserId})`;
+        await sql`UPDATE pie_allocations SET user_id = ${defaultUserId} WHERE user_id IS NULL AND NOT EXISTS (SELECT 1 FROM pie_allocations WHERE user_id = ${defaultUserId})`;
+        await sql`UPDATE yield_history SET user_id = ${defaultUserId} WHERE user_id IS NULL AND NOT EXISTS (SELECT 1 FROM yield_history WHERE user_id = ${defaultUserId})`;
+        await sql`UPDATE portfolio_data SET user_id = ${defaultUserId} WHERE user_id IS NULL AND NOT EXISTS (SELECT 1 FROM portfolio_data WHERE user_id = ${defaultUserId})`;
 
         // Check if dividend_data is empty for the default user, and if so, insert the default data.
         const { rows: dividendRows } = await sql`SELECT COUNT(*) as count FROM dividend_data WHERE user_id = ${defaultUserId}`;
