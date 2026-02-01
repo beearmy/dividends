@@ -12,46 +12,17 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use(cors());
 app.use(bodyParser.json());
 
-// Helper to get user from token (password hash)
-async function getUserId(req) {
-    // Normalize header access
-    const token = req.headers['x-auth-token'] || req.get('X-Auth-Token');
-    if (!token) return { error: 'Missing auth token', status: 401 };
-    try {
-        const { rows } = await sql`SELECT id FROM users WHERE password_hash = ${token}`;
-        if (!rows || rows.length === 0) return { error: 'Session expired or invalid', status: 401 };
-        return { userId: rows[0].id };
-    } catch (error) {
-        console.error('Database error in getUserId:', error);
-        return { error: 'Internal server error', status: 500 };
-    }
+// Helper to get account key from headers
+function getAccountKey(req) {
+    // If no key is provided, use "default"
+    return req.headers['x-account-key'] || req.get('X-Account-Key') || 'default';
 }
-
-// Authentication endpoint
-app.post('/api/auth', async (req, res) => {
-    const { passwordHash } = req.body;
-    if (!passwordHash) return res.status(400).json({ error: 'Password hash is required' });
-    try {
-        // Simple registration/login: create user if hash is new
-        await sql`INSERT INTO users (password_hash) VALUES (${passwordHash}) ON CONFLICT (password_hash) DO NOTHING`;
-        const { rows } = await sql`SELECT password_hash FROM users WHERE password_hash = ${passwordHash}`;
-        if (!rows || rows.length === 0) {
-            return res.status(500).json({ error: 'Failed to authenticate user' });
-        }
-        // Return the hash as the token
-        res.json({ token: rows[0].password_hash });
-    } catch (error) {
-        console.error('Auth error:', error);
-        res.status(500).json({ error: 'Authentication service unavailable' });
-    }
-});
 
 // Endpoints for dividend_data
 app.get('/api/dividendData', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     try {
-        const { rows } = await sql`SELECT data FROM dividend_data WHERE user_id = ${userId}`;
+        const { rows } = await sql`SELECT data FROM dividend_data WHERE account_key = ${key}`;
         res.json({
             "message": "success",
             "data": rows[0] ? rows[0].data : {}
@@ -62,14 +33,13 @@ app.get('/api/dividendData', async (req, res) => {
 });
 
 app.post('/api/dividendData', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     const data = req.body;
     try {
         const result = await sql`
-            INSERT INTO dividend_data (user_id, data)
-            VALUES (${userId}, ${JSON.stringify(data)})
-            ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data
+            INSERT INTO dividend_data (account_key, data)
+            VALUES (${key}, ${JSON.stringify(data)})
+            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
         `;
         res.json({
             "message": "success",
@@ -82,10 +52,9 @@ app.post('/api/dividendData', async (req, res) => {
 
 // Endpoints for portfolio_data
 app.get('/api/portfolioData', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     try {
-        const { rows } = await sql`SELECT data FROM portfolio_data WHERE user_id = ${userId}`;
+        const { rows } = await sql`SELECT data FROM portfolio_data WHERE account_key = ${key}`;
         res.json({
             "message": "success",
             "data": rows[0] ? rows[0].data : { portfolios: [], combinedGoal: 0 }
@@ -96,14 +65,13 @@ app.get('/api/portfolioData', async (req, res) => {
 });
 
 app.post('/api/portfolioData', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     const data = req.body;
     try {
         const result = await sql`
-            INSERT INTO portfolio_data (user_id, data)
-            VALUES (${userId}, ${JSON.stringify(data)})
-            ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data
+            INSERT INTO portfolio_data (account_key, data)
+            VALUES (${key}, ${JSON.stringify(data)})
+            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
         `;
         res.json({
             "message": "success",
@@ -116,10 +84,9 @@ app.post('/api/portfolioData', async (req, res) => {
 
 // Endpoints for pie_allocations
 app.get('/api/pieAllocations', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     try {
-        const { rows } = await sql`SELECT data FROM pie_allocations WHERE user_id = ${userId}`;
+        const { rows } = await sql`SELECT data FROM pie_allocations WHERE account_key = ${key}`;
         res.json({
             "message": "success",
             "data": rows[0] ? rows[0].data : []
@@ -130,14 +97,13 @@ app.get('/api/pieAllocations', async (req, res) => {
 });
 
 app.post('/api/pieAllocations', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     const data = req.body;
     try {
         const result = await sql`
-            INSERT INTO pie_allocations (user_id, data)
-            VALUES (${userId}, ${JSON.stringify(data)})
-            ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data
+            INSERT INTO pie_allocations (account_key, data)
+            VALUES (${key}, ${JSON.stringify(data)})
+            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
         `;
         res.json({
             "message": "success",
@@ -150,10 +116,9 @@ app.post('/api/pieAllocations', async (req, res) => {
 
 // Endpoints for yield_history
 app.get('/api/yieldHistory', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     try {
-        const { rows } = await sql`SELECT data FROM yield_history WHERE user_id = ${userId}`;
+        const { rows } = await sql`SELECT data FROM yield_history WHERE account_key = ${key}`;
         res.json({
             "message": "success",
             "data": rows[0] ? rows[0].data : []
@@ -164,14 +129,13 @@ app.get('/api/yieldHistory', async (req, res) => {
 });
 
 app.post('/api/yieldHistory', async (req, res) => {
-    const { userId, error, status } = await getUserId(req);
-    if (error) return res.status(status).json({ error });
+    const key = getAccountKey(req);
     const data = req.body;
     try {
         const result = await sql`
-            INSERT INTO yield_history (user_id, data)
-            VALUES (${userId}, ${JSON.stringify(data)})
-            ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data
+            INSERT INTO yield_history (account_key, data)
+            VALUES (${key}, ${JSON.stringify(data)})
+            ON CONFLICT (account_key) DO UPDATE SET data = EXCLUDED.data
         `;
         res.json({
             "message": "success",

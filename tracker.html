@@ -55,7 +55,7 @@
                 My Tracker
             </a>
             <button onclick="logout()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-                Logout
+                Switch Account
             </button>
         </div>
     </div>
@@ -218,13 +218,11 @@
     </div>
 
     <script>
-        const token = localStorage.getItem('divTrackerToken');
-        if (!token) {
-            window.location.href = 'index.html';
-        }
+        const accountKey = localStorage.getItem('divTrackerAccountKey') || 'default';
 
         function logout() {
-            localStorage.removeItem('divTrackerToken');
+            // "Logout" now just means go back to default
+            localStorage.setItem('divTrackerAccountKey', 'default');
             window.location.href = 'index.html';
         }
 
@@ -274,7 +272,7 @@
         async function loadData() {
             try {
                 const response = await fetch('/api/dividendData', {
-                    headers: { 'X-Auth-Token': token }
+                    headers: { 'X-Account-Key': accountKey }
                 });
                 const result = await response.json();
                 if (result.data) {
@@ -296,7 +294,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Auth-Token': token
+                        'X-Account-Key': accountKey
                     },
                     body: JSON.stringify(data)
                 });
@@ -919,7 +917,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Auth-Token': token
+                            'X-Account-Key': accountKey
                         },
                         body: JSON.stringify(historicalData)
                     };
@@ -930,7 +928,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Auth-Token': token
+                            'X-Account-Key': accountKey
                         },
                         body: JSON.stringify(pies)
                     };
@@ -987,7 +985,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-Auth-Token': token
+                                'X-Account-Key': accountKey
                             },
                             body: JSON.stringify(pies)
                         };
@@ -1013,10 +1011,10 @@
             async function loadSavedData() {
                 try {
                     const pieResponse = await fetch('/api/pieAllocations', {
-                        headers: { 'X-Auth-Token': token }
+                        headers: { 'X-Account-Key': accountKey }
                     });
                     const historyResponse = await fetch('/api/yieldHistory', {
-                        headers: { 'X-Auth-Token': token }
+                        headers: { 'X-Account-Key': accountKey }
                     });
 
                     if (pieResponse.ok) {
