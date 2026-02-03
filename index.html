@@ -399,7 +399,7 @@
 <div class="main">
     <div class="wrap">
         <div class="top-bar">
-            <div><div class="tb-title">💰 DivTrack</div><div class="tb-sub">Dividend Portfolio Tracker</div></div>
+            <div><div class="tb-title">💰 Dividend Goals</div><div class="tb-sub">Dividend Portfolio Tracker</div></div>
             <button class="btn-add" onclick="openAdd()"><span style="font-size:15px">+</span> Add</button>
         </div>
         <div id="combined"></div>
@@ -419,27 +419,24 @@ const nid  = () => portfolios.length ? Math.max(...portfolios.map(p=>p.id))+1 : 
 // ── API ──────────────────────────────────────────────────────────────────────
 async function load() {
     try {
-        const r = await fetch('/api/portfolioData');
-        const j = await r.json();
-        if (j.data) {
-            portfolios = j.data.portfolios || [];
-            combinedGoal = j.data.combinedGoal || 0;
-            combinedGoalName = j.data.combinedGoalName || '';
-            combinedGoal2 = j.data.combinedGoal2 || 0;
-            combinedGoal2Name = j.data.combinedGoal2Name || '';
-            combinedGoal3 = j.data.combinedGoal3 || 0;
-            combinedGoal3Name = j.data.combinedGoal3Name || '';
-            combinedTopUp = j.data.combinedTopUp || 0;
-            topupIncluded = j.data.topupIncluded !== undefined ? j.data.topupIncluded : true;
+        const saved = localStorage.getItem('dividendGoalsData');
+        if (saved) {
+            const j = JSON.parse(saved);
+            portfolios = j.portfolios || [];
+            combinedGoal = j.combinedGoal || 0;
+            combinedGoalName = j.combinedGoalName || '';
+            combinedGoal2 = j.combinedGoal2 || 0;
+            combinedGoal2Name = j.combinedGoal2Name || '';
+            combinedGoal3 = j.combinedGoal3 || 0;
+            combinedGoal3Name = j.combinedGoal3Name || '';
+            combinedTopUp = j.combinedTopUp || 0;
+            topupIncluded = j.topupIncluded !== undefined ? j.topupIncluded : true;
         }
     } catch(e){ console.error(e); }
 }
 async function save() {
     try {
-        await fetch('/api/portfolioData', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, topupIncluded })
-        });
+        localStorage.setItem('dividendGoalsData', JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, topupIncluded }));
     } catch(e){ console.error(e); }
 }
 
