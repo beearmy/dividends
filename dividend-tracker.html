@@ -1,294 +1,1222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script type="text/javascript" src="https://me.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=gsdeoey3BNsZGRlZyiuVHEKmZEvu9a_QAGVIbNpLfuksuVVzXO151OODFThUDTafJKFdO9tbtFH4euqkQSwN5Z03ofYZtuSus9swWrblGnr07zu9Rl9yuS4QY9PshiEWCJV3fqjxB3y2jBLlpZARUw" charset="UTF-8"></script><script async src="https://www.googletagmanager.com/gtag/js?id=G-7W30XZ23SC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-7W30XZ23SC');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Track your dividend income by month and analyze yield trends">
-    <meta name="theme-color" content="#0a0e14">
+    <meta name="description" content="Track your dividend income and investment portfolio growth with our free, easy-to-use dividend tracker. Visualize your passive income journey and reach your financial goals.">
+    <meta name="keywords" content="dividend tracker, dividend income, passive income, investment portfolio, stock dividends, financial goals, dividend investing, income tracker, portfolio tracker">
+    <meta name="theme-color" content="#1e293b">
     <title>My Dividend Tracker</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --bg: #0a0e14;
-            --surface: #111621;
-            --surface-alt: #161d2b;
-            --border: #1e2840;
-            --green: #34d399;
-            --green-dim: #1a4a35;
-            --green-glow: rgba(52,211,153,0.15);
-            --text: #e2e8f0;
-            --text-muted: #64748b;
-            --text-dim: #475569;
-            --red: #f87171;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ─── NAV ─── */
-        nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-            background: #0d1117; border-bottom: 1px solid var(--border);
-        }
-
-        .nav-inner {
-            max-width: 1200px; margin: 0 auto; padding: 0 16px;
-            display: flex; align-items: center; justify-content: space-between; height: 56px;
-        }
-
-        .nav-brand {
-            display: flex; align-items: center; gap: 10px;
-        }
-
-        .nav-brand img {
-            height: 28px; width: 28px;
-        }
-
-        .nav-brand span {
-            color: var(--text); font-size: 18px; font-weight: 700;
-        }
-
-        .nav-buttons {
-            display: flex; gap: 8px;
-        }
-
-        .btn-nav {
-            background: var(--surface-alt); border: 1px solid var(--border);
-            border-radius: 7px; color: var(--text-muted); cursor: pointer;
-            padding: 6px 12px; font-size: 12px; font-weight: 600;
-            transition: all 0.15s; font-family: inherit;
-        }
-
-        .btn-nav:hover {
-            background: var(--border); color: var(--text);
-        }
-
-        /* ─── MAIN ─── */
-        .main {
-            padding: 72px 16px 48px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            margin-bottom: 32px;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        /* ─── CARDS ─── */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .card-label {
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .card-value {
-            font-size: 28px;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-            color: var(--green);
-            margin-bottom: 4px;
-        }
-
-        .card-sub {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        /* ─── SECTION ─── */
-        .section {
-            margin-bottom: 32px;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .placeholder-box {
-            background: var(--surface);
-            border: 1px dashed var(--border);
-            border-radius: 12px;
-            padding: 32px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .placeholder-box p {
-            font-size: 13px;
-            margin-bottom: 12px;
-        }
-
-        .placeholder-box code {
-            display: block;
-            background: var(--surface-alt);
-            border-radius: 8px;
-            padding: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            text-align: left;
-            margin-top: 12px;
-            overflow-x: auto;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .empty-state h2 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .empty-state p {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-    </style>
+    <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192x192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-
-<!-- NAV -->
-<nav>
-    <div class="nav-inner">
-        <div class="nav-brand">
-            <img src="images/app-icon.png" alt="Dividend Tracker">
-            <span>My Dividend Tracker</span>
-        </div>
-        <div class="nav-buttons">
-            <button class="btn-nav" onclick="window.location.href='tracker.html'">← Back</button>
-        </div>
-    </div>
-</nav>
-
-<!-- MAIN -->
-<div class="main">
-    <div class="header">
-        <h1>📊 My Dividend Tracker</h1>
-        <p>Track your monthly dividend income and analyze yield trends</p>
-    </div>
-
-    <!-- STATS CARDS -->
-    <div class="cards-grid">
-        <div class="card">
-            <div class="card-label">2026 YTD</div>
-            <div class="card-value">£454.22</div>
-            <div class="card-sub">Year to date</div>
-        </div>
-        <div class="card">
-            <div class="card-label">All Time Total</div>
-            <div class="card-value">£2,308.20</div>
-            <div class="card-sub">Since tracking</div>
-        </div>
-        <div class="card">
-            <div class="card-label">Best Month</div>
-            <div class="card-value">£454.22</div>
-            <div class="card-sub">Jan 2026</div>
-        </div>
-        <div class="card">
-            <div class="card-label">2026 Avg/Month</div>
-            <div class="card-value">£454.22</div>
-            <div class="card-sub">Average</div>
-        </div>
-    </div>
-
-    <!-- MONTHLY BREAKDOWN -->
-    <div class="section">
-        <div class="section-title">Monthly Breakdown</div>
-        <div class="placeholder-box">
-            <p>📋 Monthly dividend income table</p>
-            <p style="font-size: 11px; margin-bottom: 0;">This section will display your month-by-month dividend income across all years.</p>
-            <code>Jan: £454.22 | Feb: £429.02 | Mar: £384.18 | Apr: £330.46...</code>
-        </div>
-    </div>
-
-    <!-- YIELD TRACKING -->
-    <div class="section">
-        <div class="section-title">Portfolio Yield Analysis</div>
-        <div class="cards-grid">
-            <div class="card">
-                <div class="card-label">Blended Yield</div>
-                <div class="card-value">9.83%</div>
-                <div class="card-sub">Current weighted average</div>
-            </div>
-            <div class="card">
-                <div class="card-label">Total Portfolio</div>
-                <div class="card-value">£44,953</div>
-                <div class="card-sub">Invested</div>
+<body class="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 min-h-screen">
+    <!-- Hamburger Menu -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-800 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <img src="images/app-icon.png" alt="Dividend Tracker Icon" class="h-8 w-8 mr-2">
+                    <span class="text-white text-xl font-bold">Dividend Tracker</span>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="toggleMenu(event)" class="text-slate-300 hover:text-white p-2">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
-        <div class="placeholder-box" style="margin-top: 16px;">
-            <p>📈 Investment breakdown by yield category</p>
-            <p style="font-size: 11px; margin-bottom: 0;">This section will show your portfolio allocation across different yield tiers (Low Risk, Medium Risk, High Risk, etc.)</p>
+    </nav>
+
+    <!-- Dropdown Menu -->
+    <div id="menu" class="hidden fixed top-16 right-4 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-40 min-w-[200px]">
+        <div class="py-2">
+            <a href="index.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                Home
+            </a>
+            <a href="tracker.html" class="block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                My Tracker
+            </a>
         </div>
     </div>
 
-    <!-- YIELD TRENDS -->
-    <div class="section">
-        <div class="section-title">Yield Trends Over Time</div>
-        <div class="placeholder-box">
-            <p>📊 Historical yield trends chart</p>
-            <p style="font-size: 11px; margin-bottom: 0;">This section will display how your blended yield has changed over the past months, helping you track yield management.</p>
-            <code>Jan 2026: 9.83% | Dec 2025: 10.40% | Nov 2025: 10.17%...</code>
+    <!-- Main Content -->
+    <div class="pt-20 pb-8 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-4xl font-bold text-white">My Dividend Tracker</h1>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-emerald-400" id="ytd-total">£597.81</div>
+                        <div class="text-sm text-slate-400" id="ytd-label">2026 YTD</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-sky-400" id="static-padi">£0.00</div>
+                        <div class="text-sm text-slate-400">Static PADI</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">All Time Total</p>
+                    <p id="all-time-total" class="text-2xl font-bold text-white">£0.00</p>
+                </div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">Best Month Ever</p>
+                    <p id="best-month-value" class="text-2xl font-bold text-amber-400">£0.00</p>
+                    <p id="best-month-date" class="text-xs text-slate-500">-</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p id="avg-month-label" class="text-slate-400 text-sm">2026 Avg/Month</p>
+                    <p id="avg-month-value" class="text-2xl font-bold text-emerald-400">£0.00</p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+                    <p class="text-slate-400 text-sm">YoY Growth</p>
+                    <p id="yoy-growth" class="text-2xl font-bold text-blue-400">-</p>
+                </div>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 mb-6">
+                <div class="flex flex-wrap gap-2 justify-between items-center">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="showView('table')" id="btn-table" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                            Table View
+                        </button>
+                        <button onclick="showView('chart')" id="btn-chart" class="px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">
+                            Chart View
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button onclick="toggleActionsMenu(event)" id="actions-menu-button" class="px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors flex items-center gap-2">
+                            Actions
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="actions-menu" class="hidden absolute top-full right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl z-40 min-w-[200px]">
+                            <div class="py-2">
+                                <button onclick="saveData()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    💾 Save
+                                </button>
+                                <button onclick="downloadData()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    📥 Download
+                                </button>
+                                <button onclick="document.getElementById('fileInput').click()" class="w-full text-left block px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                                    📤 Import
+                                </button>
+                                <input type="file" id="fileInput" accept=".json" style="display: none" onchange="importData(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div id="table-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-slate-700">
+                                <th class="p-3 text-left font-semibold text-slate-200">Month</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2026</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2025</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2024</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2023</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2022</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2021</th>
+                                <th class="p-3 text-right font-semibold text-slate-200">2020</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Chart View -->
+            <div id="chart-view" class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl p-6" style="display: none;">
+                <canvas id="myChart" height="100"></canvas>
+            </div>
+
+
+            <!-- Investment Pie Yield Tracker -->
+            <details id="yield-tracker-container" class="mt-8 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl group">
+                <summary class="p-6 cursor-pointer group-open:border-b group-open:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">Investment Pie Yield Tracker</h2>
+                    </div>
+                    <div class="transform transition-transform duration-200 group-open:rotate-180">
+                        <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </summary>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-slate-900/50 border border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+                             <h3 class="text-slate-400 text-lg mb-2">Total Blended Current Yield</h3>
+                             <p id="blended-yield" class="text-5xl font-bold text-emerald-400 mb-2">0.00%</p>
+                             <p id="total-allocation" class="text-slate-500">Total Portfolio: £0</p>
+                             <p class="text-xs text-slate-600 mt-1">Weighted by allocation amounts</p>
+                        </div>
+                        <div id="pie-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:col-span-2">
+                            <!-- Pie cards will be dynamically inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 mt-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-semibold text-slate-200">Yield Trends Over Time</h3>
+                                <p class="text-xs text-slate-500">Edit yields directly in the grid below • Auto-saves on change</p>
+                            </div>
+                            <div id="yield-save-status" class="text-sm text-slate-400"></div>
+                        </div>
+                        
+                        <!-- Monthly Yield Input Grid -->
+                        <div id="yield-input-grid" class="mb-6 overflow-x-auto">
+                            <!-- Grid will be populated by JS -->
+                        </div>
+                        
+                        <div style="height: 300px;">
+                            <canvas id="yield-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
         </div>
     </div>
 
-    <!-- SETUP INSTRUCTIONS -->
-    <div class="section">
-        <div class="empty-state">
-            <div class="empty-state-icon">⚙️</div>
-            <h2>Ready to Connect Your Data?</h2>
-            <p>This is your personal Dividend Tracker. To display your monthly income data, yield analysis, and portfolio trends, connect your data source.</p>
-            <p style="font-size: 11px; color: var(--text-dim);">Contact your administrator to set up data syncing from your portfolio management system.</p>
-        </div>
-    </div>
-</div>
+    <script>
+        // Menu toggle
+        function toggleMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('menu');
+            menu.classList.toggle('hidden');
+        }
 
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('menu');
+            const hamburger = event.target.closest('nav button');
+            
+            if (!menu.contains(event.target) && !hamburger && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function toggleActionsMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('actions-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('actions-menu');
+            const button = document.getElementById('actions-menu-button');
+            if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Dividend data
+        let data = {
+            2020: { Jan: 2.38, Feb: 8.05, Mar: 6.29, Apr: 0.63, May: 6.29, Jun: 6.27, Jul: 5.96, Aug: 11.07, Sep: 15.34, Oct: 0.71, Nov: 9.19, Dec: 6.77 },
+            2021: { Jan: 2.74, Feb: 82.94, Mar: 12.42, Apr: 4.28, May: 4.01, Jun: 9.11, Jul: 8.97, Aug: 18.00, Sep: 18.24, Oct: 3.07, Nov: 9.00, Dec: 6.28 },
+            2022: { Jan: 3.50, Feb: 10.80, Mar: 8.00, Apr: 12.00, May: 8.50, Jun: 23.00, Jul: 6.00, Aug: 14.00, Sep: 23.50, Oct: 2.20, Nov: 11.00, Dec: 9.00 },
+            2023: { Jan: 5.85, Feb: 13.39, Mar: 11.00, Apr: 9.77, May: 10.69, Jun: 24.19, Jul: 7.29, Aug: 23.16, Sep: 26.96, Oct: 9.50, Nov: 16.61, Dec: 17.56 },
+            2024: { Jan: 7.33, Feb: 8.26, Mar: 11.89, Apr: 19.69, May: 19.44, Jun: 33.42, Jul: 27.60, Aug: 19.03, Sep: 34.56, Oct: 30.54, Nov: 20.31, Dec: 33.85 },
+            2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: 90.99, Nov: 198.53, Dec: 226.24 },
+            2026: { Jan: 454.22, Feb: null, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null }
+        };
+
+        // Load saved data from backend
+        async function loadData() {
+            try {
+                const response = await fetch('/api/dividendData');
+                const result = await response.json();
+                if (result.data) {
+                    data = result.data;
+                    // Ensure 2026 exists
+                    if (!data['2026']) {
+                        data['2026'] = { Jan: null, Feb: null, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null };
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Save data to backend
+        async function saveData() {
+            try {
+                await fetch('/api/dividendData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                alert('✅ Data saved successfully!');
+            } catch (error) {
+                console.error('Error saving data:', error);
+                alert('❌ Error saving data.');
+            }
+        }
+
+        // Download data as JSON file
+        function downloadData() {
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'dividend-tracker-data.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Import data from JSON file
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    data = importedData;
+                    saveData();
+                    updateStats();
+                    buildTable();
+                    if (myChart) {
+                        myChart.destroy();
+                        myChart = null;
+                    }
+                    alert('✅ Data imported successfully!');
+                } catch (error) {
+                    alert('❌ Error importing data. Please make sure the file is a valid JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020'];
+
+        function getComparison(year, month) {
+            const yearIndex = years.indexOf(year);
+            if (yearIndex === years.length - 1 || data[year][month] === null) return 'neutral';
+            
+            const prevYear = years[yearIndex + 1];
+            const currentVal = data[year][month];
+            const prevVal = data[prevYear][month];
+            
+            if (prevVal === null || currentVal === null) return 'neutral';
+            
+            // Check if this is the best month of THIS YEAR only
+            const yearValues = Object.values(data[year]).filter(v => v !== null);
+            const isBestOfYear = currentVal === Math.max(...yearValues);
+            
+            if (isBestOfYear) return 'best';
+            return currentVal > prevVal ? 'better' : 'worse';
+        }
+
+        function getColorClass(status) {
+            switch(status) {
+                case 'best': return 'bg-amber-900 border-amber-500 text-amber-100';
+                case 'better': return 'bg-emerald-900 border-emerald-500 text-emerald-100';
+                case 'worse': return 'bg-red-900 border-red-500 text-red-100';
+                default: return 'bg-slate-700 border-slate-600 text-slate-300';
+            }
+        }
+
+        function editCell(year, month, element) {
+            const currentValue = data[year][month] || 0;
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.value = currentValue;
+            input.className = 'w-full px-2 py-1 bg-slate-900 text-white rounded border border-blue-500 focus:outline-none';
+            
+            const parent = element.parentElement;
+            parent.innerHTML = '';
+            parent.appendChild(input);
+            input.focus();
+            input.select();
+            
+            input.addEventListener('blur', function() {
+                const newValue = parseFloat(input.value);
+                data[year][month] = isNaN(newValue) ? null : newValue;
+                updateStats();
+                buildTable();
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+            });
+            
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    input.blur();
+                }
+            });
+        }
+
+        function updateStats() {
+            // Get current year for YTD
+            const currentYear = new Date().getFullYear().toString();
+            const ytdTotal = data[currentYear] ? Object.values(data[currentYear]).reduce((sum, val) => sum + (val || 0), 0) : 0;
+            document.getElementById('ytd-total').textContent = `£${ytdTotal.toFixed(2)}`;
+            
+            // Update YTD label
+            const ytdLabel = document.getElementById('ytd-label');
+            if (ytdLabel) {
+                ytdLabel.textContent = `${currentYear} YTD`;
+            }
+
+            // Calculate All Time Total
+            let allTimeTotal = 0;
+            Object.keys(data).forEach(year => {
+                Object.values(data[year]).forEach(val => {
+                    allTimeTotal += (val || 0);
+                });
+            });
+            document.getElementById('all-time-total').textContent = `£${allTimeTotal.toFixed(2)}`;
+
+            // Find Best Month Ever
+            let bestMonthValue = 0;
+            let bestMonthDate = '';
+            Object.keys(data).forEach(year => {
+                Object.keys(data[year]).forEach(month => {
+                    const value = data[year][month];
+                    if (value && value > bestMonthValue) {
+                        bestMonthValue = value;
+                        bestMonthDate = `${month} ${year}`;
+                    }
+                });
+            });
+            document.getElementById('best-month-value').textContent = `£${bestMonthValue.toFixed(2)}`;
+            document.getElementById('best-month-date').textContent = bestMonthDate || '-';
+
+            // Calculate Current Year Average per Month
+            const currentYearValues = data[currentYear] ? Object.values(data[currentYear]).filter(v => v !== null) : [];
+            const currentYearAvg = currentYearValues.length > 0 
+                ? currentYearValues.reduce((sum, val) => sum + val, 0) / currentYearValues.length 
+                : 0;
+            document.getElementById('avg-month-label').textContent = `${currentYear} Avg/Month`;
+            document.getElementById('avg-month-value').textContent = `£${currentYearAvg.toFixed(2)}`;
+
+            // Calculate YoY Growth (current year vs previous year)
+            const prevYear = (parseInt(currentYear) - 1).toString();
+            if (data[prevYear] && data[currentYear]) {
+                const currentYearTotal = Object.values(data[currentYear]).reduce((sum, val) => sum + (val || 0), 0);
+                const prevYearTotal = Object.values(data[prevYear]).reduce((sum, val) => sum + (val || 0), 0);
+                
+                if (prevYearTotal > 0) {
+                    const growthPercent = ((currentYearTotal - prevYearTotal) / prevYearTotal) * 100;
+                    const growthSign = growthPercent >= 0 ? '+' : '';
+                    const growthColor = growthPercent >= 0 ? 'text-blue-400' : 'text-red-400';
+                    const yoyElement = document.getElementById('yoy-growth');
+                    yoyElement.textContent = `${growthSign}${growthPercent.toFixed(1)}%`;
+                    yoyElement.className = `text-2xl font-bold ${growthColor}`;
+                } else {
+                    document.getElementById('yoy-growth').textContent = '-';
+                }
+            } else {
+                document.getElementById('yoy-growth').textContent = '-';
+            }
+        }
+
+        function buildTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            months.forEach(month => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-700 hover:bg-slate-750';
+                
+                const monthCell = document.createElement('td');
+                monthCell.className = 'p-3 font-medium text-slate-200';
+                monthCell.textContent = month;
+                row.appendChild(monthCell);
+                
+                years.forEach(year => {
+                    const cell = document.createElement('td');
+                    cell.className = 'p-3 text-right';
+                    
+                    const value = data[year][month];
+                    const status = getComparison(year, month);
+                    
+                    const span = document.createElement('span');
+                    span.className = `inline-block px-3 py-1 rounded border-2 ${getColorClass(status)} font-medium cursor-pointer hover:opacity-80`;
+                    span.textContent = value !== null ? `£${value.toFixed(2)}` : '-';
+                    span.onclick = () => editCell(year, month, span);
+                    
+                    cell.appendChild(span);
+                    row.appendChild(cell);
+                });
+                
+                tbody.appendChild(row);
+            });
+            
+            // Add totals row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'bg-slate-700 font-bold';
+            const totalLabel = document.createElement('td');
+            totalLabel.className = 'p-3 text-slate-200';
+            totalLabel.textContent = 'Year Total';
+            totalRow.appendChild(totalLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-200';
+                const total = Object.values(data[year]).reduce((sum, val) => sum + (val || 0), 0);
+                cell.textContent = `£${total.toFixed(2)}`;
+                totalRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(totalRow);
+
+            // Add average row
+            const avgRow = document.createElement('tr');
+            avgRow.className = 'bg-slate-750 font-semibold';
+            const avgLabel = document.createElement('td');
+            avgLabel.className = 'p-3 text-slate-300';
+            avgLabel.textContent = 'Monthly Average';
+            avgRow.appendChild(avgLabel);
+            
+            years.forEach(year => {
+                const cell = document.createElement('td');
+                cell.className = 'p-3 text-right text-slate-300';
+                const values = Object.values(data[year]).filter(v => v !== null);
+                const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+                cell.textContent = `£${avg.toFixed(2)}`;
+                avgRow.appendChild(cell);
+            });
+            
+            tbody.appendChild(avgRow);
+        }
+
+        function showView(view) {
+            const tableView = document.getElementById('table-view');
+            const chartView = document.getElementById('chart-view');
+            const btnTable = document.getElementById('btn-table');
+            const btnChart = document.getElementById('btn-chart');
+            
+            if (view === 'table') {
+                tableView.style.display = 'block';
+                chartView.style.display = 'none';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+            } else {
+                tableView.style.display = 'none';
+                chartView.style.display = 'block';
+                btnTable.className = 'px-4 py-2 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors';
+                btnChart.className = 'px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+                initChart();
+            }
+        }
+
+        let myChart = null;
+
+        function initChart() {
+            if (myChart) return;
+            
+            const ctx = document.getElementById('myChart').getContext('2d');
+            
+            const datasets = years.map((year, index) => {
+                const colors = ['#818cf8', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#60a5fa'];
+                return {
+                    label: year,
+                    data: months.map(month => data[year][month]),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index] + '20',
+                    tension: 0.4,
+                    borderWidth: year === '2025' ? 3 : 2
+                };
+            });
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#cbd5e1'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += '£' + context.parsed.y.toFixed(2);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#cbd5e1',
+                                callback: function(value) {
+                                    return '£' + value;
+                                }
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#cbd5e1'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        async function initialize() {
+            await loadData();
+            updateStats();
+            buildTable();
+        }
+        initialize();
+
+        // --- Investment Pie Yield Tracker ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            let pies = [
+                { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#f59e0b' },
+                { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
+                { name: 'Medium Risk', currentYield: 3.03, allocation: 0, targetAllocation: null, color: '#8b5cf6' },
+                { name: 'High Risk', currentYield: 22.0, allocation: 0, targetAllocation: null, color: '#ef4444' },
+                { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#3b82f6' }
+            ];
+
+            let historicalData = [
+                { date: 'Sep 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
+                { date: 'Oct 2025', 'Income Factory': 10.8, 'Low Risk': 4.5, 'Medium Risk': 3.1, 'High Risk': 22.5, 'Top UK Payers': 8.3 }
+            ];
+
+            let yieldChart = null;
+
+            const blendedYieldEl = document.getElementById('blended-yield');
+            const totalAllocationEl = document.getElementById('total-allocation');
+            const pieCardsContainer = document.getElementById('pie-cards-container');
+
+            function calculateBlendedYield() {
+                const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                if (totalAllocation === 0) return '0.00';
+                const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
+                return (weightedYield / totalAllocation).toFixed(2);
+            }
+
+            function getTotalAllocation() {
+                return pies.reduce((sum, pie) => sum + pie.allocation, 0);
+            }
+
+            function getAllocationStatus(currentPercent, targetPercent) {
+                if (targetPercent === null || targetPercent === undefined) {
+                    return { color: 'bg-slate-600', text: 'No target' };
+                }
+                const difference = Math.abs(currentPercent - targetPercent);
+                if (difference <= 5) {
+                    return { color: 'bg-emerald-500', text: 'On target' };
+                } else {
+                    return { color: 'bg-red-500', text: 'Off target' };
+                }
+            }
+
+            function renderPieCards() {
+                pieCardsContainer.innerHTML = '';
+                const totalAllocation = getTotalAllocation();
+
+                const sortedPies = [...pies].sort((a, b) => b.allocation - a.allocation);
+
+                sortedPies.forEach(pie => {
+                    const originalIndex = pies.findIndex(p => p.name === pie.name);
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700 hover:border-slate-600 transition-all";
+
+                    const allocationPercent = totalAllocation > 0 ? ((pie.allocation / totalAllocation) * 100).toFixed(1) : 0;
+                    const status = getAllocationStatus(allocationPercent, pie.targetAllocation);
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${pie.color};"></div>
+                                <h4 class="font-semibold text-white text-sm">${pie.name}</h4>
+                            </div>
+                            <span class="text-lg font-bold text-emerald-400">${pie.currentYield ? pie.currentYield.toFixed(2) : '0.00'}%</span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="text-xs text-slate-400 block mb-1">Investment (£)</label>
+                            <input type="number" value="${pie.allocation || ''}" placeholder="0" class="allocation-input w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:border-emerald-500 focus:outline-none" data-index="${originalIndex}">
+                        </div>
+                        ${pie.allocation > 0 ? `
+                            <div class="flex justify-between items-center mt-2 text-xs">
+                                <span class="text-slate-400">${allocationPercent}% of portfolio</span>
+                                <div class="flex items-center gap-2">
+                                     <input type="number" value="${pie.targetAllocation ?? ''}" placeholder="Tgt %" class="target-input w-14 bg-slate-700 text-white rounded px-2 py-1 border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs" step="0.1" data-index="${originalIndex}">
+                                     <span class="px-2 py-1 rounded font-medium ${status.color} text-white text-xs">${status.text}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    `;
+                    pieCardsContainer.appendChild(card);
+                });
+            }
+
+            function updateCalculatedDisplays() {
+                blendedYieldEl.textContent = `${calculateBlendedYield()}%`;
+                totalAllocationEl.textContent = `Total Portfolio: £${getTotalAllocation().toLocaleString()}`;
+                calculateAndDisplayPADI();
+            }
+
+            function calculateAndDisplayPADI() {
+                const staticPadiEl = document.getElementById('static-padi');
+                const annualYield = parseFloat(calculateBlendedYield());
+                const portfolioValue = getTotalAllocation();
+
+                if (isNaN(annualYield) || portfolioValue === 0) {
+                    staticPadiEl.textContent = '£0.00';
+                    return;
+                }
+
+                const monthlyYield = Math.pow(1 + annualYield / 100, 1 / 12) - 1;
+                let projectedValue = portfolioValue;
+                let totalDividends = 0;
+
+                for (let i = 0; i < 12; i++) {
+                    const monthlyDividend = projectedValue * monthlyYield;
+                    totalDividends += monthlyDividend;
+                    projectedValue += monthlyDividend;
+                }
+
+                staticPadiEl.textContent = `£${totalDividends.toFixed(2)}`;
+            }
+
+            function updateUI() {
+                updateCalculatedDisplays();
+                renderPieCards();
+                renderYieldInputGrid();
+                renderYieldChart();
+            }
+
+            // Render the editable yield input grid - NEWEST months first, scrollable, hide empty months
+            function renderYieldInputGrid() {
+                const gridContainer = document.getElementById('yield-input-grid');
+                if (!gridContainer) return;
+
+                // Filter historical data: keep months with data + one "next" month placeholder
+                const lastMonthWithDataIndex = historicalData.findLastIndex(d => 
+                    pies.some(pie => d[pie.name] != null)
+                );
+                
+                // Filter to only show: months with data + the next empty month (if exists)
+                const filteredData = historicalData.filter((d, i) => {
+                    const hasData = pies.some(pie => d[pie.name] != null);
+                    const isNextMonth = i === lastMonthWithDataIndex + 1;
+                    return hasData || isNextMonth;
+                });
+
+                // If no data at all, show just the first month as placeholder
+                if (filteredData.length === 0 && historicalData.length > 0) {
+                    filteredData.push(historicalData[0]);
+                }
+
+                // Reverse to show newest first
+                const reversedData = [...filteredData].reverse();
+
+                // Build a table with months as columns (newest first) and pies as rows
+                let html = `
+                    <div class="overflow-x-auto max-w-full" style="max-height: 400px;">
+                        <table class="text-sm border-separate border-spacing-0" style="min-width: max-content;">
+                            <thead>
+                                <tr class="bg-slate-700/50">
+                                    <th class="p-2 text-left text-slate-300 font-medium sticky left-0 bg-slate-700 z-20 min-w-[110px]">Pie</th>
+                                    ${reversedData.map((d, i) => {
+                                        // Check if this is the "next" month (empty placeholder)
+                                        const isNextMonth = !pies.some(pie => d[pie.name] != null);
+                                        const originalIndex = historicalData.findIndex(h => h.date === d.date);
+                                        return `<th class="p-2 text-center text-slate-300 font-medium min-w-[80px] whitespace-nowrap ${isNextMonth ? 'bg-emerald-900/30' : ''}">${d.date}${isNextMonth ? '<br><span class="text-xs text-emerald-400 font-normal">(next)</span>' : ''}</th>`;
+                                    }).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                pies.forEach((pie, pieIndex) => {
+                    html += `
+                        <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+                            <td class="p-2 font-medium text-slate-200 sticky left-0 bg-slate-800 z-10">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${pie.color};"></div>
+                                    <span class="truncate text-xs">${pie.name}</span>
+                                </div>
+                            </td>
+                            ${reversedData.map((d, i) => {
+                                const originalIndex = historicalData.findIndex(h => h.date === d.date);
+                                const yieldValue = d[pie.name];
+                                const hasValue = yieldValue !== null && yieldValue !== undefined;
+                                const isNextMonth = !pies.some(p => d[p.name] != null);
+                                return `
+                                    <td class="p-1 ${isNextMonth ? 'bg-emerald-900/20' : ''}">
+                                        <input 
+                                            type="number" 
+                                            step="0.01" 
+                                            value="${hasValue ? yieldValue : ''}" 
+                                            placeholder="-"
+                                            class="yield-grid-input w-full px-2 py-1.5 text-center bg-slate-700/50 text-white rounded border border-slate-600 focus:border-emerald-500 focus:outline-none text-xs ${isNextMonth ? 'border-emerald-600/50 bg-emerald-900/30' : ''}"
+                                            data-pie-index="${pieIndex}"
+                                            data-month-index="${originalIndex}"
+                                            data-date="${d.date}"
+                                        >
+                                    </td>
+                                `;
+                            }).join('')}
+                        </tr>
+                    `;
+                });
+
+                // Add blended yield row
+                html += `
+                        <tr class="border-t-2 border-slate-600 bg-slate-700/30">
+                            <td class="p-2 font-bold text-white sticky left-0 bg-slate-700 z-10 text-xs">Blended</td>
+                            ${reversedData.map((d, i) => {
+                                const hasAnyYield = pies.some(pie => d[pie.name] != null);
+                                let blendedYield = '-';
+                                if (hasAnyYield) {
+                                    const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                                    if (totalAllocation > 0) {
+                                        const weightedYield = pies.reduce((sum, pie) => {
+                                            const yieldVal = d[pie.name];
+                                            if (yieldVal === null || yieldVal === undefined) return sum;
+                                            return sum + (yieldVal * pie.allocation);
+                                        }, 0);
+                                        blendedYield = (weightedYield / totalAllocation).toFixed(2) + '%';
+                                    }
+                                }
+                                return `<td class="p-2 text-center font-bold text-emerald-400 text-xs">${blendedYield}</td>`;
+                            }).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+                </div>
+                ${reversedData.length > 4 ? '<p class="text-xs text-slate-500 mt-2 text-right">← Scroll for older months</p>' : ''}
+                `;
+
+                gridContainer.innerHTML = html;
+
+                // Add event listeners for auto-save on blur
+                gridContainer.querySelectorAll('.yield-grid-input').forEach(input => {
+                    input.addEventListener('blur', handleYieldInputBlur);
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.target.blur();
+                        }
+                    });
+                });
+            }
+
+            // Handle yield input blur - auto-save
+            async function handleYieldInputBlur(e) {
+                const input = e.target;
+                const pieIndex = parseInt(input.dataset.pieIndex);
+                const monthIndex = parseInt(input.dataset.monthIndex);
+                const date = input.dataset.date;
+                const newValue = input.value === '' ? null : parseFloat(input.value);
+                
+                const pieName = pies[pieIndex].name;
+                const oldValue = historicalData[monthIndex][pieName];
+                
+                // Only save if value changed
+                if (oldValue === newValue || (oldValue === undefined && newValue === null)) {
+                    return;
+                }
+                
+                // Update the historical data
+                historicalData[monthIndex][pieName] = newValue;
+                
+                // Update the pie's currentYield to the most recent month's value for this pie
+                const lastMonthWithThisPieData = historicalData.findLastIndex(d => d[pieName] != null);
+                if (lastMonthWithThisPieData !== -1) {
+                    pies[pieIndex].currentYield = historicalData[lastMonthWithThisPieData][pieName];
+                }
+                
+                // Show saving status
+                const statusEl = document.getElementById('yield-save-status');
+                statusEl.textContent = '💾 Saving...';
+                statusEl.className = 'text-sm text-yellow-400';
+                
+                // Auto-save to backend
+                try {
+                    const historyPayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(historicalData)
+                    };
+                    await fetch('/api/yieldHistory', historyPayload);
+                    
+                    // Also save pie allocations with updated currentYield
+                    const piePayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pies)
+                    };
+                    await fetch('/api/pieAllocations', piePayload);
+                    
+                    statusEl.textContent = '✓ Saved';
+                    statusEl.className = 'text-sm text-emerald-400';
+                    
+                    // Ensure next month exists
+                    ensureNextMonthDataPoint();
+                    
+                    // Re-render everything to reflect changes
+                    renderYieldInputGrid();
+                    renderYieldChart();
+                    renderPieCards();
+                    updateCalculatedDisplays();
+                    
+                    setTimeout(() => {
+                        statusEl.textContent = '';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                    statusEl.textContent = '❌ Save failed';
+                    statusEl.className = 'text-sm text-red-400';
+                }
+            }
+
+            // Handle allocation input changes with auto-save
+            pieCardsContainer.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const target = e.target;
+
+                if (target.classList.contains('allocation-input')) {
+                    pies[index].allocation = parseFloat(target.value) || 0;
+                } else if (target.classList.contains('target-input')) {
+                    pies[index].targetAllocation = target.value === '' ? null : parseFloat(target.value);
+                }
+
+                // Update the totals live
+                updateCalculatedDisplays();
+            });
+
+            // Auto-save allocations on blur
+            pieCardsContainer.addEventListener('focusout', async (e) => {
+                const target = e.target;
+                if (target.classList.contains('allocation-input') || target.classList.contains('target-input')) {
+                    // Show saving status
+                    const statusEl = document.getElementById('yield-save-status');
+                    statusEl.textContent = '💾 Saving...';
+                    statusEl.className = 'text-sm text-yellow-400';
+                    
+                    try {
+                        const piePayload = {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(pies)
+                        };
+                        await fetch('/api/pieAllocations', piePayload);
+                        
+                        statusEl.textContent = '✓ Saved';
+                        statusEl.className = 'text-sm text-emerald-400';
+                        
+                        // Re-render to update sorting and percentages
+                        updateUI();
+                        
+                        setTimeout(() => {
+                            statusEl.textContent = '';
+                        }, 2000);
+                    } catch (error) {
+                        console.error('Auto-save failed:', error);
+                        statusEl.textContent = '❌ Save failed';
+                        statusEl.className = 'text-sm text-red-400';
+                    }
+                }
+            });
+
+            async function loadSavedData() {
+                try {
+                    const pieResponse = await fetch('/api/pieAllocations');
+                    const historyResponse = await fetch('/api/yieldHistory');
+
+                    if (pieResponse.ok) {
+                        const pieResult = await pieResponse.json();
+                        if (pieResult.data) {
+                            pies = typeof pieResult.data === 'string' ? JSON.parse(pieResult.data) : pieResult.data;
+                        }
+                    }
+
+                    if (historyResponse.ok) {
+                        const historyResult = await historyResponse.json();
+                        if (historyResult.data) {
+                            // Sort the data to ensure chronological order
+                            const monthOrder = { 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12 };
+                            historyResult.data.sort((a, b) => {
+                                const [monthA, yearA] = a.date.split(' ');
+                                const [monthB, yearB] = b.date.split(' ');
+                                if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+                                return monthOrder[monthA] - monthOrder[monthB];
+                            });
+
+                            historicalData = historyResult.data;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading saved data:', error);
+                }
+            }
+
+            function renderYieldChart() {
+                const ctx = document.getElementById('yield-chart').getContext('2d');
+                if(yieldChart) {
+                    yieldChart.destroy();
+                }
+
+                const blendedYieldData = historicalData.map(dataPoint => {
+                    const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                    if (totalAllocation === 0) return null;
+
+                    const weightedYield = pies.reduce((sum, pie) => {
+                        const historicalYield = dataPoint[pie.name];
+                        if (historicalYield === null || historicalYield === undefined) {
+                            return sum;
+                        }
+                        return sum + (historicalYield * pie.allocation);
+                    }, 0);
+
+                    const hasAnyYield = pies.some(pie => dataPoint[pie.name] != null);
+                    if (!hasAnyYield) {
+                        return null;
+                    }
+
+                    return (weightedYield / totalAllocation).toFixed(2);
+                });
+
+                // Find the last month that has ANY yield data.
+                const lastDataPointIndex = historicalData.findLastIndex(dataPoint =>
+                    pies.some(pie => dataPoint[pie.name] != null)
+                );
+
+                // Update the blended yield for the most recent month with the current live calculation
+                if (lastDataPointIndex !== -1) {
+                    blendedYieldData[lastDataPointIndex] = calculateBlendedYield();
+                }
+
+                const datasets = pies.map(pie => ({
+                    label: pie.name,
+                    data: historicalData.map(d => d[pie.name]),
+                    borderColor: pie.color,
+                    backgroundColor: `${pie.color}20`,
+                    tension: 0.4,
+                    borderWidth: 2
+                }));
+
+                function calculatePredictedBlendedYield() {
+                    const totalTargetAllocation = pies.reduce((sum, pie) => sum + (pie.targetAllocation || 0), 0);
+                    if (totalTargetAllocation === 0) {
+                        const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                        if (totalAllocation === 0) return 0;
+                        const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
+                        return (weightedYield / totalAllocation);
+                    }
+                    const weightedYield = pies.reduce((sum, pie) => {
+                        return sum + (pie.currentYield * (pie.targetAllocation || 0));
+                    }, 0);
+                    return (weightedYield / totalTargetAllocation);
+                }
+
+                const predictedYield = calculatePredictedBlendedYield().toFixed(2);
+
+                const lastHistoricalIndex = lastDataPointIndex;
+                const blendedYieldWithPrediction = [...blendedYieldData];
+
+                // Predict for the next month if it exists in the array
+                if (lastHistoricalIndex !== -1 && lastHistoricalIndex < blendedYieldWithPrediction.length - 1) {
+                    blendedYieldWithPrediction[lastHistoricalIndex + 1] = predictedYield;
+                }
+
+                datasets.push({
+                    label: 'Blended Yield',
+                    data: blendedYieldWithPrediction,
+                    borderColor: '#ffffff',
+                    backgroundColor: '#ffffff20',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    segment: {
+                        borderColor: ctx => {
+                            const index = ctx.p0DataIndex;
+                            if (lastHistoricalIndex !== -1 && index >= lastHistoricalIndex) {
+                                return 'rgba(255, 255, 255, 0.5)';
+                            }
+                            return '#ffffff';
+                        },
+                        borderDash: ctx => {
+                            const index = ctx.p0DataIndex;
+                            if (lastHistoricalIndex !== -1 && index >= lastHistoricalIndex) {
+                                return [5, 5];
+                            }
+                            return undefined;
+                        }
+                    }
+                });
+
+                yieldChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: historicalData.map(d => d.date),
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: '#cbd5e1' }},
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.dataset.label}: ${context.parsed.y}%`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: false, ticks: { color: '#cbd5e1', callback: (v) => `${v}%` }, grid: { color: '#334155' }},
+                            x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' }}
+                        }
+                    }
+                });
+            }
+
+            function ensureNextMonthDataPoint() {
+                if (historicalData.length === 0) {
+                    // Initialize with current month if no data
+                    const now = new Date();
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const currentMonthStr = monthNames[now.getMonth()];
+                    const currentYear = now.getFullYear();
+                    const newEntry = { date: `${currentMonthStr} ${currentYear}` };
+                    pies.forEach(pie => {
+                        newEntry[pie.name] = null;
+                    });
+                    historicalData.push(newEntry);
+                    return;
+                }
+
+                // Find the last month that has actual data
+                const lastMonthWithData = historicalData.findLastIndex(d => 
+                    pies.some(pie => d[pie.name] != null)
+                );
+
+                // If no data at all, just keep the empty placeholder
+                if (lastMonthWithData === -1) {
+                    return;
+                }
+
+                // Check if we already have an empty "next month" after the last data
+                const hasEmptyNextMonth = lastMonthWithData < historicalData.length - 1;
+                
+                if (hasEmptyNextMonth) {
+                    // Already have a next month placeholder
+                    return;
+                }
+
+                // Add next month after the last month with data
+                const lastEntry = historicalData[lastMonthWithData];
+                const [lastMonthStr, lastYearStr] = lastEntry.date.split(' ');
+                const lastYear = parseInt(lastYearStr);
+
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const lastMonthIndex = monthNames.indexOf(lastMonthStr);
+
+                let nextMonthIndex = lastMonthIndex + 1;
+                let nextYear = lastYear;
+
+                if (nextMonthIndex > 11) {
+                    nextMonthIndex = 0; // January
+                    nextYear++;
+                }
+
+                const nextMonthStr = monthNames[nextMonthIndex];
+                const nextDate = `${nextMonthStr} ${nextYear}`;
+
+                const nextMonthExists = historicalData.some(d => d.date === nextDate);
+
+                if (!nextMonthExists) {
+                    const newEntry = { date: nextDate };
+                    pies.forEach(pie => {
+                        newEntry[pie.name] = null;
+                    });
+                    historicalData.push(newEntry);
+                    // Sort to ensure proper order
+                    const monthOrder = { 'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12 };
+                    historicalData.sort((a, b) => {
+                        const [monthA, yearA] = a.date.split(' ');
+                        const [monthB, yearB] = b.date.split(' ');
+                        if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+                        return monthOrder[monthA] - monthOrder[monthB];
+                    });
+                }
+            }
+
+
+            // Initial Load
+            async function initializeTracker() {
+                await loadSavedData();
+                ensureNextMonthDataPoint();
+                updateUI();
+            }
+            initializeTracker();
+
+        });
+    </script>
 </body>
 </html>
