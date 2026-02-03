@@ -288,6 +288,32 @@
             font-size: 13px; text-align: center; transition: all 0.15s;
         }
         .tracker-link:hover { border-color: var(--green); color: var(--green); }
+
+        /* ─── TOGGLE SWITCH ─── */
+        .toggle-switch {
+            position: relative; display: inline-block; width: 44px; height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0; width: 0; height: 0;
+        }
+        .toggle-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border); transition: .3s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: var(--text-muted); transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--green);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background-color: #0a0e14;
+        }
     </style>
 </head>
 <body>
@@ -396,7 +422,7 @@
 </div>
 
 <script>
-let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, editingId = null;
+let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, topupIncluded = true, editingId = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -418,6 +444,7 @@ async function load() {
             combinedGoal3 = j.data.combinedGoal3 || 0;
             combinedGoal3Name = j.data.combinedGoal3Name || '';
             combinedTopUp = j.data.combinedTopUp || 0;
+            topupIncluded = j.data.topupIncluded !== undefined ? j.data.topupIncluded : true;
         }
     } catch(e){ console.error(e); }
 }
@@ -425,7 +452,7 @@ async function save() {
     try {
         await fetch('/api/portfolioData', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp })
+            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, topupIncluded })
         });
     } catch(e){ console.error(e); }
 }
@@ -612,9 +639,9 @@ function getGoalBlock(goal, name, totA, avg, topUp = 0) {
     if(!done){
         const need=avg>0?(goal-totA)/(avg/100):0;
         html+='<div class="g-hint">Invest <span class="hl">'+fmt(need)+'</span> more at your average yield to reach your goal</div>';
-        if(avg > 0 && (totA > 0 || topUp > 0)) {
+        if(avg > 0 && (totA > 0 || (topupIncluded && topUp > 0))) {
             const r = Math.pow(1 + avg / 100, 1 / 12) - 1;
-            const K = (topUp / 12) * (avg / 100);
+            const K = topupIncluded ? (topUp / 12) * (avg / 100) : 0;
             const mReq = Math.ceil(Math.log((goal + K/r) / (totA + K/r)) / Math.log(1 + r));
             let tStr = "";
             if (mReq < 13) {
@@ -623,7 +650,7 @@ function getGoalBlock(goal, name, totA, avg, topUp = 0) {
                 const yrs = Math.floor(mReq / 12), mos = mReq % 12;
                 tStr = yrs + " year" + (yrs !== 1 ? "s" : "") + (mos > 0 ? " and " + mos + " month" + (mos !== 1 ? "s" : "") : "");
             }
-            html += '<div class="g-hint" style="margin-top:10px; color:var(--text); font-weight:600; font-size:13px;">On course to reach your goal in <span class="hl" style="color:var(--green)">' + tStr + '</span> through dividend reinvestment' + (topUp > 0 ? ' and top-ups' : '') + '! 🚀</div>';
+            html += '<div class="g-hint" style="margin-top:10px; color:var(--text); font-weight:600; font-size:13px;">On course to reach your goal in <span class="hl" style="color:var(--green)">' + tStr + '</span> through dividend reinvestment' + (topupIncluded && topUp > 0 ? ' and top-ups' : '') + '! 🚀</div>';
         }
     }
     else html+='<div class="g-done" style="font-size:14px; margin-top:12px;">Congratulations! 🍾 What’s next?</div>';
@@ -645,7 +672,10 @@ function renderCombined(){
                 '<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 2px;">Yearly Top-up</div>' +
                 '<div style="font-size: 16px; font-weight: 700;">' + fmt(combinedTopUp) + ' <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">/yr</span></div>' +
             '</div>' +
-            '<button class="btn-goal" onclick="openGoalModal(1)">Edit Top-up</button>' +
+            '<div style="display: flex; align-items: center; gap: 8px;">' +
+                '<label class="toggle-switch" style="margin: 0;"><input type="checkbox" id="topup-toggle" ' + (topupIncluded ? 'checked' : '') + ' onchange="topupIncluded = this.checked; save(); render();"><span class="toggle-slider"></span></label>' +
+                '<button class="btn-goal" onclick="openGoalModal(1)">Edit Top-up</button>' +
+            '</div>' +
         '</div>';
     }
 
