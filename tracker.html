@@ -247,7 +247,7 @@
         <p>Select which tracker you'd like to access:</p>
         <div class="menu-buttons">
             <button class="menu-btn" onclick="window.location.href='divtrack-personal.html'">
-                <span>💰 DivTrack</span>
+                <span>💰 Dividend Goals</span>
                 <span>→</span>
             </button>
             <button class="menu-btn" onclick="window.location.href='dividend-tracker.html'">
@@ -263,6 +263,9 @@
 function checkPw(){
     const h = CryptoJS.SHA256(document.getElementById('pwInput').value).toString();
     if(h==='d5378a00c61377598c6f3dc4a00d4507b68f7e214bbee32ac241d6957aa0b7bd'){
+        // Store login time for 24 hours
+        const now = new Date();
+        sessionStorage.setItem('loginTime', now.getTime());
         document.getElementById('loginModal').classList.remove('show');
         document.getElementById('menuModal').classList.add('show');
     } else {
@@ -273,6 +276,7 @@ function checkPw(){
 }
 
 function logout(){
+    sessionStorage.removeItem('loginTime');
     document.getElementById('loginModal').classList.add('show');
     document.getElementById('menuModal').classList.remove('show');
     document.getElementById('pwInput').value='';
@@ -280,7 +284,25 @@ function logout(){
     document.getElementById('pwInput').focus();
 }
 
-document.getElementById('pwInput').focus();
+// Check if already logged in (within 24 hours)
+window.addEventListener('load', () => {
+    const loginTime = sessionStorage.getItem('loginTime');
+    if (loginTime) {
+        const now = new Date().getTime();
+        const elapsed = now - parseInt(loginTime);
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        
+        if (elapsed < twentyFourHours) {
+            // Still logged in
+            document.getElementById('loginModal').classList.remove('show');
+            document.getElementById('menuModal').classList.add('show');
+        } else {
+            // Session expired
+            sessionStorage.removeItem('loginTime');
+        }
+    }
+    document.getElementById('pwInput').focus();
+});
 </script>
 
 </body>
