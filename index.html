@@ -332,21 +332,7 @@
 </nav>
 <div id="menu">
     <a href="index.html">Home</a>
-    <button onclick="showPwModal()">My Tracker 🔒</button>
-</div>
-
-<!-- PASSWORD MODAL -->
-<div id="pwModal" class="overlay">
-    <div class="modal">
-        <div class="modal-head"><h2>Enter Password</h2><button class="modal-close" onclick="hidePwModal()">✕</button></div>
-        <p>Enter your password to access your personal dividend tracker.</p>
-        <div class="field"><div class="field-row"><input type="password" id="pwInput" class="fn" placeholder="Password" onkeypress="if(event.key==='Enter')checkPw()"></div></div>
-        <div id="pwErr" class="error">Incorrect password. Please try again.</div>
-        <div class="btn-row">
-            <button class="btn-primary" onclick="checkPw()">Submit</button>
-            <button class="btn-ghost" onclick="hidePwModal()">Cancel</button>
-        </div>
-    </div>
+    <a href="tracker.html">Login 🔒</a>
 </div>
 
 <!-- ADD MODAL -->
@@ -463,16 +449,6 @@ document.addEventListener('click', e => {
     const m = document.getElementById('menu');
     if (!m.contains(e.target) && !e.target.closest('.hamburger')) m.classList.remove('open');
 });
-
-// ── PASSWORD ─────────────────────────────────────────────────────────────────
-function showPwModal(){ document.getElementById('menu').classList.remove('open'); document.getElementById('pwModal').classList.add('open'); setTimeout(()=>document.getElementById('pwInput').focus(),50); }
-function hidePwModal(){ document.getElementById('pwModal').classList.remove('open'); document.getElementById('pwInput').value=''; document.getElementById('pwErr').classList.remove('show'); }
-function checkPw(){
-    const h = CryptoJS.SHA256(document.getElementById('pwInput').value).toString();
-    if(h==='d5378a00c61377598c6f3dc4a00d4507b68f7e214bbee32ac241d6957aa0b7bd'){ window.location.href='tracker.html'; }
-    else { document.getElementById('pwErr').classList.add('show'); document.getElementById('pwInput').value=''; document.getElementById('pwInput').focus(); }
-}
-document.getElementById('pwModal').addEventListener('click', function(e){ if(e.target===this) hidePwModal(); });
 
 // ── MODALS ───────────────────────────────────────────────────────────────────
 function open(id){ document.getElementById(id).classList.add('open'); }
