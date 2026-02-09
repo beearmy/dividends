@@ -409,10 +409,20 @@
 </div>
 
 <script>
-let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, topupIncluded = true, editingId = null;
+let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, topupIncluded = true, editingId = null, lastStats = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
+const fmtDelta = (d, isP, is2) => {
+    const v = Math.abs(d);
+    if (v < (isP || is2 ? 0.005 : 1)) return '<span style="color:var(--text-dim); font-size:0.85em; font-weight:normal; margin-left:4px;">(-)</span>';
+    const s = d > 0 ? '+' : '-';
+    let str = '';
+    if (isP) str = s + v.toFixed(2) + '%';
+    else if (is2) str = s + '£' + v.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+    else str = s + '£' + Math.floor(v).toLocaleString('en-GB');
+    return `<span style="color:var(--${d>0?'green':'red'}); font-size:0.85em; font-weight:normal; margin-left:4px;">(${str})</span>`;
+};
 const fmt2 = n => '£' + n.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = v => parseFloat(String(v).replace(/[^0-9.]/g,'')) || 0;
 const nid  = () => portfolios.length ? Math.max(...portfolios.map(p=>p.id))+1 : 1;
@@ -634,10 +644,22 @@ function getGoalBlock(goal, name, totA, avg, topUp = 0) {
 
 function renderCombined(){
     const el=document.getElementById('combined');
-    if(!portfolios.length){ el.innerHTML=''; return; }
+    if(!portfolios.length){ el.innerHTML=''; lastStats = null; return; }
     const totA=portfolios.reduce((s,p)=>s+(p.isFixed ? p.fixedDividend : p.totalInvested*(p.yieldPercent/100)),0);
     const totI=portfolios.reduce((s,p)=>s+p.totalInvested,0);
     const avg=totI>0?(totA/totI)*100:0;
+
+    const currentStats = { m: totA/12, d: totA/365, h: totA/WH, a: avg };
+    let deltas = { m: '', d: '', h: '', a: '' };
+
+    if (lastStats) {
+        deltas.m = fmtDelta(Math.floor(currentStats.m) - Math.floor(lastStats.m));
+        deltas.d = fmtDelta(currentStats.d - lastStats.d, false, true);
+        deltas.h = fmtDelta(currentStats.h - lastStats.h, false, true);
+        deltas.a = fmtDelta(currentStats.a - lastStats.a, true);
+    } else {
+        deltas.m = deltas.d = deltas.h = deltas.a = fmtDelta(0);
+    }
 
     let gh = '';
     if (combinedGoal > 0 || combinedTopUp > 0) {
@@ -681,14 +703,16 @@ function renderCombined(){
             '<div class="c-sub">'+portfolios.length+' portfolio'+(portfolios.length!==1?'s':'')+' · Annual Dividend Income</div>'+
             '<div class="c-total">'+fmt(totA)+'</div>'+
             '<div class="c-stats">'+
-                '<div class="c-stat"><div class="cs-l">Monthly</div><div class="cs-v">'+fmt(totA/12)+'</div></div>'+
-                '<div class="c-stat"><div class="cs-l">Daily</div><div class="cs-v">'+fmt2(totA/365)+'</div></div>'+
-                '<div class="c-stat"><div class="cs-l">Hourly</div><div class="cs-v">'+fmt2(totA/WH)+'</div></div>'+
-                '<div class="c-stat"><div class="cs-l">Avg Yield</div><div class="cs-v">'+avg.toFixed(2)+'%</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Monthly</div><div class="cs-v">'+fmt(totA/12)+deltas.m+'</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Daily</div><div class="cs-v">'+fmt2(totA/365)+deltas.d+'</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Hourly</div><div class="cs-v">'+fmt2(totA/WH)+deltas.h+'</div></div>'+
+                '<div class="c-stat"><div class="cs-l">Avg Yield</div><div class="cs-v">'+avg.toFixed(2)+'%'+deltas.a+'</div></div>'+
             '</div>'+
         '</div>'+
         '<div class="c-goal-section">'+gh+'</div>'+
     '</div>';
+
+    lastStats = currentStats;
 }
 
 function renderCards(){
