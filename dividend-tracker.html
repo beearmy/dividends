@@ -91,7 +91,7 @@
                 </div>
 
                 <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
-                    <p id="avg-month-label" class="text-slate-400 text-sm">2026 Avg/Month</p>
+                    <p id="avg-month-label" class="text-slate-400 text-sm">All Time Monthly Average</p>
                     <p id="avg-month-value" class="text-2xl font-bold text-emerald-400">£0.00</p>
                 </div>
 
@@ -428,13 +428,18 @@
             document.getElementById('best-month-value').textContent = `£${bestMonthValue.toFixed(2)}`;
             document.getElementById('best-month-date').textContent = bestMonthDate || '-';
 
-            // Calculate Current Year Average per Month
-            const currentYearValues = data[currentYear] ? Object.values(data[currentYear]).filter(v => v !== null) : [];
-            const currentYearAvg = currentYearValues.length > 0 
-                ? currentYearValues.reduce((sum, val) => sum + val, 0) / currentYearValues.length 
-                : 0;
-            document.getElementById('avg-month-label').textContent = `${currentYear} Avg/Month`;
-            document.getElementById('avg-month-value').textContent = `£${currentYearAvg.toFixed(2)}`;
+            // Calculate All Time Monthly Average
+            let totalRecordedMonths = 0;
+            Object.keys(data).forEach(year => {
+                Object.values(data[year]).forEach(val => {
+                    if (val !== null) {
+                        totalRecordedMonths++;
+                    }
+                });
+            });
+            const allTimeAvg = totalRecordedMonths > 0 ? allTimeTotal / totalRecordedMonths : 0;
+            document.getElementById('avg-month-label').textContent = `All Time Monthly Average`;
+            document.getElementById('avg-month-value').textContent = `£${allTimeAvg.toFixed(2)}`;
 
             // Calculate YoY Growth (current year vs previous year)
             const prevYear = (parseInt(currentYear) - 1).toString();
