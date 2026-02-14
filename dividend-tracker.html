@@ -71,8 +71,21 @@
                         <div class="text-sm text-slate-400" id="ytd-label">2026 YTD</div>
                     </div>
                     <div class="text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <div class="text-3xl font-bold text-sky-400" id="ttm-yield">0.00%</div>
+                            <span id="ttm-trend" class="text-xl font-bold text-slate-500">(-)</span>
+                        </div>
+                        <div class="text-sm text-slate-400">TTM Yield</div>
+                    </div>
+                    <div class="text-right relative">
                         <div class="text-3xl font-bold text-sky-400" id="static-padi">£0.00</div>
-                        <div class="text-sm text-slate-400">Static PADI</div>
+                        <div class="text-sm text-slate-400 flex items-center justify-end gap-1">
+                            Static PADI
+                            <span id="padi-help-icon" class="cursor-pointer text-slate-500 hover:text-sky-400 transition-colors text-xs font-bold border border-slate-500 rounded-full w-4 h-4 flex items-center justify-center select-none" onclick="togglePadiTooltip(event)">(?)</span>
+                        </div>
+                        <div id="padi-tooltip" class="hidden absolute top-full right-0 z-50 bg-slate-700 text-white text-xs p-3 rounded-lg shadow-xl border border-slate-600 min-w-[200px] text-left mt-2">
+                            Projects your dividends for the next 12 months by applying your current yield to your portfolio, assuming monthly reinvestment.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -215,6 +228,13 @@
     </div>
 
     <script>
+        // Tooltip toggle
+        function togglePadiTooltip(event) {
+            event.stopPropagation();
+            const tooltip = document.getElementById('padi-tooltip');
+            tooltip.classList.toggle('hidden');
+        }
+
         // Menu toggle
         function toggleMenu(event) {
             event.stopPropagation();
@@ -222,13 +242,19 @@
             menu.classList.toggle('hidden');
         }
 
-        // Close menu when clicking outside
+        // Close menu and tooltips when clicking outside
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('menu');
             const hamburger = event.target.closest('nav button');
             
-            if (!menu.contains(event.target) && !hamburger && !menu.classList.contains('hidden')) {
+            if (menu && !menu.contains(event.target) && !hamburger && !menu.classList.contains('hidden')) {
                 menu.classList.add('hidden');
+            }
+
+            const tooltip = document.getElementById('padi-tooltip');
+            const helpIcon = document.getElementById('padi-help-icon');
+            if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(event.target) && event.target !== helpIcon) {
+                tooltip.classList.add('hidden');
             }
         });
 
@@ -256,6 +282,20 @@
             2025: { Jan: 35.85, Feb: 25.20, Mar: 44.84, Apr: 53.72, May: 44.76, Jun: 62.39, Jul: 75.65, Aug: 47.27, Sep: 117.14, Oct: 90.99, Nov: 198.53, Dec: 226.24 },
             2026: { Jan: 454.22, Feb: null, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null }
         };
+
+        // Pie and Yield state
+        let pies = [
+            { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#f59e0b' },
+            { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
+            { name: 'Medium Risk', currentYield: 3.03, allocation: 0, targetAllocation: null, color: '#8b5cf6' },
+            { name: 'High Risk', currentYield: 22.0, allocation: 0, targetAllocation: null, color: '#ef4444' },
+            { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#3b82f6' }
+        ];
+        let historicalData = [];
+
+        function getTotalAllocation() {
+            return pies.reduce((sum, pie) => sum + pie.allocation, 0);
+        }
 
         // Load saved data from backend
         async function loadData() {
@@ -360,6 +400,87 @@
             }
         }
 
+        function updateTTMYieldDisplay() {
+            const ttmYieldEl = document.getElementById('ttm-yield');
+            const ttmTrendEl = document.getElementById('ttm-trend');
+            if (!ttmYieldEl || !ttmTrendEl) return;
+
+            const portfolioValue = getTotalAllocation();
+            if (portfolioValue === 0) {
+                ttmYieldEl.textContent = '0.00%';
+                ttmTrendEl.textContent = '(-)';
+                ttmTrendEl.className = 'text-xl font-bold text-slate-500';
+                return;
+            }
+
+            // Flatten dividend data into chronological list
+            const chronologicalDividends = [];
+            const sortedYears = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            sortedYears.forEach(year => {
+                monthNames.forEach(month => {
+                    chronologicalDividends.push({
+                        year: parseInt(year),
+                        month: month,
+                        value: data[year][month]
+                    });
+                });
+            });
+
+            // Find the most recent month with data
+            let anchorIndex = -1;
+            for (let i = chronologicalDividends.length - 1; i >= 0; i--) {
+                if (chronologicalDividends[i].value !== null) {
+                    anchorIndex = i;
+                    break;
+                }
+            }
+
+            if (anchorIndex === -1) {
+                ttmYieldEl.textContent = '0.00%';
+                ttmTrendEl.textContent = '(-)';
+                ttmTrendEl.className = 'text-xl font-bold text-slate-500';
+                return;
+            }
+
+            // Calculate Current TTM (last 12 months ending at anchor)
+            let currentTTMSum = 0;
+            for (let i = 0; i < 12; i++) {
+                const idx = anchorIndex - i;
+                if (idx >= 0) {
+                    currentTTMSum += (chronologicalDividends[idx].value || 0);
+                }
+            }
+
+            const currentTTMYield = (currentTTMSum / portfolioValue) * 100;
+            ttmYieldEl.textContent = `${currentTTMYield.toFixed(2)}%`;
+
+            // Calculate Previous TTM (last 12 months ending one month before anchor)
+            let previousTTMSum = 0;
+            const prevAnchorIndex = anchorIndex - 1;
+
+            for (let i = 0; i < 12; i++) {
+                const idx = prevAnchorIndex - i;
+                if (idx >= 0) {
+                    previousTTMSum += (chronologicalDividends[idx].value || 0);
+                }
+            }
+
+            const previousTTMYield = (previousTTMSum / portfolioValue) * 100;
+
+            if (currentTTMYield > previousTTMYield + 0.0001) { // Small epsilon to avoid floating point issues
+                ttmTrendEl.textContent = '↑';
+                ttmTrendEl.className = 'text-xl font-bold text-emerald-400';
+            } else if (currentTTMYield < previousTTMYield - 0.0001) {
+                ttmTrendEl.textContent = '↓';
+                ttmTrendEl.className = 'text-xl font-bold text-red-400';
+            } else {
+                ttmTrendEl.textContent = '(-)';
+                ttmTrendEl.className = 'text-xl font-bold text-slate-500';
+            }
+        }
+
         function editCell(year, month, element) {
             const currentValue = data[year][month] || 0;
             const input = document.createElement('input');
@@ -460,6 +581,8 @@
             } else {
                 document.getElementById('yoy-growth').textContent = '-';
             }
+
+            updateTTMYieldDisplay();
         }
 
         function buildTable() {
@@ -637,20 +760,9 @@
         initialize();
 
         // --- Investment Pie Yield Tracker ---
+        let updateUI; // Global reference for tracker updates
+
         document.addEventListener('DOMContentLoaded', async () => {
-            let pies = [
-                { name: 'Income Factory', currentYield: 10.77, allocation: 0, targetAllocation: null, color: '#f59e0b' },
-                { name: 'Low Risk', currentYield: 4.42, allocation: 0, targetAllocation: null, color: '#10b981' },
-                { name: 'Medium Risk', currentYield: 3.03, allocation: 0, targetAllocation: null, color: '#8b5cf6' },
-                { name: 'High Risk', currentYield: 22.0, allocation: 0, targetAllocation: null, color: '#ef4444' },
-                { name: 'Top UK Payers', currentYield: 8.21, allocation: 0, targetAllocation: null, color: '#3b82f6' }
-            ];
-
-            let historicalData = [
-                { date: 'Sep 2025', 'Income Factory': 10.77, 'Low Risk': 4.42, 'Medium Risk': 3.03, 'High Risk': 22.0, 'Top UK Payers': 8.21 },
-                { date: 'Oct 2025', 'Income Factory': 10.8, 'Low Risk': 4.5, 'Medium Risk': 3.1, 'High Risk': 22.5, 'Top UK Payers': 8.3 }
-            ];
-
             let yieldChart = null;
 
             const blendedYieldEl = document.getElementById('blended-yield');
@@ -658,14 +770,10 @@
             const pieCardsContainer = document.getElementById('pie-cards-container');
 
             function calculateBlendedYield() {
-                const totalAllocation = pies.reduce((sum, pie) => sum + pie.allocation, 0);
+                const totalAllocation = getTotalAllocation();
                 if (totalAllocation === 0) return '0.00';
                 const weightedYield = pies.reduce((sum, pie) => sum + (pie.currentYield * pie.allocation), 0);
                 return (weightedYield / totalAllocation).toFixed(2);
-            }
-
-            function getTotalAllocation() {
-                return pies.reduce((sum, pie) => sum + pie.allocation, 0);
             }
 
             function getAllocationStatus(currentPercent, targetPercent) {
@@ -749,11 +857,12 @@
                 staticPadiEl.textContent = `£${totalDividends.toFixed(2)}`;
             }
 
-            function updateUI() {
+            updateUI = function() {
                 updateCalculatedDisplays();
                 renderPieCards();
                 renderYieldInputGrid();
                 renderYieldChart();
+                updateTTMYieldDisplay();
             }
 
             // Render the editable yield input grid - NEWEST months first, scrollable, hide empty months
