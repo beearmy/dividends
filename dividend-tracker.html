@@ -24,6 +24,84 @@
     <link rel="manifest" href="site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --surface: #111621;
+            --surface-alt: #161d2b;
+            --border: #1e2840;
+            --green: #34d399;
+            --green-dim: #1a4a35;
+            --green-glow: rgba(52,211,153,0.15);
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --text-dim: #475569;
+            --red: #f87171;
+            --red-surface: #2a1515;
+        }
+
+        .overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
+            z-index: 200; align-items: center; justify-content: center; padding: 16px;
+        }
+        .overlay.open { display: flex; }
+        .modal {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; width: 100%; max-width: 400px;
+            padding: 28px; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+            color: var(--text);
+        }
+        .modal-head {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .modal-head h2 { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 20px; line-height: 1;
+            transition: color 0.15s;
+        }
+        .modal-close:hover { color: var(--text); }
+
+        .field { margin-bottom: 14px; text-align: left; }
+        .field label {
+            display: block; font-size: 10px; color: var(--text-muted);
+            margin-bottom: 5px; text-transform: uppercase;
+            letter-spacing: 1px; font-weight: 600;
+        }
+        .field-row {
+            display: flex; align-items: center;
+            background: var(--surface-alt); border-radius: 9px;
+            border: 1px solid var(--border); overflow: hidden;
+        }
+        .fx { padding: 9px 0 9px 12px; color: var(--text-dim); font-size: 14px; font-weight: 600; flex-shrink: 0; }
+        .sx { padding: 9px 12px 9px 0; color: var(--text-dim); font-size: 13px; flex-shrink: 0; }
+        .field-row input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums;
+            font-family: inherit;
+        }
+        .fi { padding: 9px 4px; }
+        .fn { padding: 9px 12px; }
+
+        .btn-primary {
+            width: 100%; background: linear-gradient(135deg, var(--green), #10b981);
+            border: none; border-radius: 9px; color: #0a0e14;
+            padding: 11px 0; font-size: 14px; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 18px var(--green-glow);
+            transition: opacity 0.15s; font-family: inherit;
+        }
+        .btn-primary:hover { opacity: 0.82; }
+
+        .btn-ghost {
+            flex: 1; background: var(--surface-alt); border: 1px solid var(--border);
+            border-radius: 9px; color: var(--red); padding: 10px 0;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            font-family: inherit; transition: opacity 0.15s;
+        }
+        .btn-ghost:hover { opacity: 0.7; }
+
+        .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 min-h-screen">
     <!-- Hamburger Menu -->
@@ -227,7 +305,44 @@
         </div>
     </div>
 
+    <!-- ADD PIE MODAL -->
+    <div id="addPieModal" class="overlay">
+        <div class="modal">
+            <div class="modal-head"><h2>Add New Pie</h2><button class="modal-close" onclick="closeModal('addPieModal')">✕</button></div>
+            <div id="addPieErr" class="error" style="margin-bottom: 10px; color: var(--red); font-size: 13px; display: none;"></div>
+            <div class="field"><label>Pie Name</label><div class="field-row"><input type="text" id="p-name" class="fn" placeholder="e.g. Growth Stocks"></div></div>
+            <div class="field"><label>Pie Color</label><div class="field-row"><input type="color" id="p-color" class="fn" style="height: 40px; padding: 2px;" value="#3b82f6"></div></div>
+            <div class="field"><label>Target Allocation (%)</label><div class="field-row"><input type="number" id="p-target" class="fn" placeholder="0" step="0.1"></div></div>
+            <button class="btn-primary" onclick="doAddPie()">Add Pie</button>
+        </div>
+    </div>
+
+    <!-- EDIT PIE MODAL -->
+    <div id="editPieModal" class="overlay">
+        <div class="modal">
+            <div class="modal-head"><h2>Edit Pie</h2><button class="modal-close" onclick="closeModal('editPieModal')">✕</button></div>
+            <div id="editPieErr" class="error" style="margin-bottom: 10px; color: var(--red); font-size: 13px; display: none;"></div>
+            <div class="field"><label>Pie Name</label><div class="field-row"><input type="text" id="pe-name" class="fn" placeholder="e.g. Growth Stocks"></div></div>
+            <div class="field"><label>Pie Color</label><div class="field-row"><input type="color" id="pe-color" class="fn" style="height: 40px; padding: 2px;"></div></div>
+            <div class="field"><label>Target Allocation (%)</label><div class="field-row"><input type="number" id="pe-target" class="fn" placeholder="0" step="0.1"></div></div>
+            <div class="btn-row">
+                <button class="btn-primary" onclick="doEditPie()">Save Changes</button>
+                <button class="btn-ghost" onclick="deletePieFromModal()">Delete Pie</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('open');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.remove('open');
+        }
+
         // Tooltip toggle
         function togglePadiTooltip(event) {
             event.stopPropagation();
@@ -242,7 +357,7 @@
             menu.classList.toggle('hidden');
         }
 
-        // Close menu and tooltips when clicking outside
+        // Close menu, tooltips and modals when clicking outside
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('menu');
             const hamburger = event.target.closest('nav button');
@@ -255,6 +370,11 @@
             const helpIcon = document.getElementById('padi-help-icon');
             if (tooltip && !tooltip.classList.contains('hidden') && !tooltip.contains(event.target) && event.target !== helpIcon) {
                 tooltip.classList.add('hidden');
+            }
+
+            // Close modals when clicking on the overlay
+            if (event.target.classList.contains('overlay')) {
+                event.target.classList.remove('open');
             }
         });
 
@@ -804,11 +924,16 @@
 
                     card.innerHTML = `
                         <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${pie.color};"></div>
-                                <h4 class="font-semibold text-white text-sm">${pie.name}</h4>
+                            <div class="flex items-center overflow-hidden">
+                                <div class="w-3 h-3 rounded-full mr-2 flex-shrink-0" style="background-color: ${pie.color};"></div>
+                                <h4 class="font-semibold text-white text-sm truncate mr-2">${pie.name}</h4>
+                                <button onclick="openEditPie(${originalIndex})" class="text-slate-500 hover:text-white transition-colors mr-1 flex-shrink-0">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                </button>
                             </div>
-                            <span class="text-lg font-bold text-emerald-400">${pie.currentYield ? pie.currentYield.toFixed(2) : '0.00'}%</span>
+                            <span class="text-lg font-bold text-emerald-400 flex-shrink-0">${pie.currentYield ? pie.currentYield.toFixed(2) : '0.00'}%</span>
                         </div>
                         <div class="mb-2">
                             <label class="text-xs text-slate-400 block mb-1">Investment (£)</label>
@@ -826,6 +951,20 @@
                     `;
                     pieCardsContainer.appendChild(card);
                 });
+
+                // Add "Add New Pie" card
+                const addCard = document.createElement('div');
+                addCard.className = "bg-slate-800/50 rounded-xl p-4 shadow-lg border border-slate-700 border-dashed hover:border-emerald-500 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[160px] group";
+                addCard.onclick = openAddPie;
+                addCard.innerHTML = `
+                    <div class="text-slate-500 group-hover:text-emerald-400 mb-2 transition-colors">
+                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </div>
+                    <span class="text-slate-500 group-hover:text-slate-300 font-medium transition-colors">Add New Pie</span>
+                `;
+                pieCardsContainer.appendChild(addCard);
             }
 
             function updateCalculatedDisplays() {
@@ -1011,43 +1150,17 @@
                 statusEl.textContent = '💾 Saving...';
                 statusEl.className = 'text-sm text-yellow-400';
                 
-                // Auto-save to backend
-                try {
-                    const historyPayload = {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(historicalData)
-                    };
-                    await fetch('/api/yieldHistory', historyPayload);
-                    
-                    // Also save pie allocations with updated currentYield
-                    const piePayload = {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(pies)
-                    };
-                    await fetch('/api/pieAllocations', piePayload);
-                    
-                    statusEl.textContent = '✓ Saved';
-                    statusEl.className = 'text-sm text-emerald-400';
-                    
-                    // Ensure next month exists
-                    ensureNextMonthDataPoint();
-                    
-                    // Re-render everything to reflect changes
-                    renderYieldInputGrid();
-                    renderYieldChart();
-                    renderPieCards();
-                    updateCalculatedDisplays();
-                    
-                    setTimeout(() => {
-                        statusEl.textContent = '';
-                    }, 2000);
-                } catch (error) {
-                    console.error('Auto-save failed:', error);
-                    statusEl.textContent = '❌ Save failed';
-                    statusEl.className = 'text-sm text-red-400';
-                }
+                // Auto-save to backend using helpers
+                await Promise.all([saveHistory(), savePies()]);
+
+                // Ensure next month exists
+                ensureNextMonthDataPoint();
+
+                // Re-render everything to reflect changes
+                renderYieldInputGrid();
+                renderYieldChart();
+                renderPieCards();
+                updateCalculatedDisplays();
             }
 
             // Handle allocation input changes with auto-save
@@ -1069,33 +1182,9 @@
             pieCardsContainer.addEventListener('focusout', async (e) => {
                 const target = e.target;
                 if (target.classList.contains('allocation-input') || target.classList.contains('target-input')) {
-                    // Show saving status
-                    const statusEl = document.getElementById('yield-save-status');
-                    statusEl.textContent = '💾 Saving...';
-                    statusEl.className = 'text-sm text-yellow-400';
-                    
-                    try {
-                        const piePayload = {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(pies)
-                        };
-                        await fetch('/api/pieAllocations', piePayload);
-                        
-                        statusEl.textContent = '✓ Saved';
-                        statusEl.className = 'text-sm text-emerald-400';
-                        
-                        // Re-render to update sorting and percentages
-                        updateUI();
-                        
-                        setTimeout(() => {
-                            statusEl.textContent = '';
-                        }, 2000);
-                    } catch (error) {
-                        console.error('Auto-save failed:', error);
-                        statusEl.textContent = '❌ Save failed';
-                        statusEl.className = 'text-sm text-red-400';
-                    }
+                    await savePies();
+                    // Re-render to update sorting and percentages
+                    updateUI();
                 }
             });
 
@@ -1321,6 +1410,165 @@
                 }
             }
 
+
+            async function savePies() {
+                const statusEl = document.getElementById('yield-save-status');
+                if (statusEl) {
+                    statusEl.textContent = '💾 Saving...';
+                    statusEl.className = 'text-sm text-yellow-400';
+                }
+                try {
+                    const piePayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pies)
+                    };
+                    await fetch('/api/pieAllocations', piePayload);
+                    if (statusEl) {
+                        statusEl.textContent = '✓ Saved';
+                        statusEl.className = 'text-sm text-emerald-400';
+                        setTimeout(() => statusEl.textContent = '', 2000);
+                    }
+                } catch (error) {
+                    console.error('Failed to save pies:', error);
+                    if (statusEl) {
+                        statusEl.textContent = '❌ Save failed';
+                        statusEl.className = 'text-sm text-red-400';
+                    }
+                }
+            }
+
+            async function saveHistory() {
+                const statusEl = document.getElementById('yield-save-status');
+                if (statusEl) {
+                    statusEl.textContent = '💾 Saving...';
+                    statusEl.className = 'text-sm text-yellow-400';
+                }
+                try {
+                    const historyPayload = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(historicalData)
+                    };
+                    await fetch('/api/yieldHistory', historyPayload);
+                    if (statusEl) {
+                        statusEl.textContent = '✓ Saved';
+                        statusEl.className = 'text-sm text-emerald-400';
+                        setTimeout(() => statusEl.textContent = '', 2000);
+                    }
+                } catch (error) {
+                    console.error('Failed to save history:', error);
+                    if (statusEl) {
+                        statusEl.textContent = '❌ Save failed';
+                        statusEl.className = 'text-sm text-red-400';
+                    }
+                }
+            }
+
+            window.openAddPie = function() {
+                document.getElementById('p-name').value = '';
+                document.getElementById('p-color').value = '#3b82f6';
+                document.getElementById('p-target').value = '';
+                document.getElementById('addPieErr').style.display = 'none';
+                openModal('addPieModal');
+            };
+
+            window.doAddPie = async function() {
+                const name = document.getElementById('p-name').value.trim();
+                const color = document.getElementById('p-color').value;
+                const target = document.getElementById('p-target').value === '' ? null : parseFloat(document.getElementById('p-target').value);
+                const errEl = document.getElementById('addPieErr');
+
+                if (!name) {
+                    errEl.textContent = 'Please enter a pie name.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                if (pies.some(p => p.name === name)) {
+                    errEl.textContent = 'A pie with this name already exists.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                pies.push({
+                    name: name,
+                    currentYield: 0,
+                    allocation: 0,
+                    targetAllocation: target,
+                    color: color
+                });
+
+                closeModal('addPieModal');
+                await savePies();
+                updateUI();
+            };
+
+            let editingPieIndex = -1;
+
+            window.openEditPie = function(index) {
+                editingPieIndex = index;
+                const pie = pies[index];
+                document.getElementById('pe-name').value = pie.name;
+                document.getElementById('pe-color').value = pie.color;
+                document.getElementById('pe-target').value = pie.targetAllocation ?? '';
+                document.getElementById('editPieErr').style.display = 'none';
+                openModal('editPieModal');
+            };
+
+            window.doEditPie = async function() {
+                if (editingPieIndex === -1) return;
+
+                const oldName = pies[editingPieIndex].name;
+                const newName = document.getElementById('pe-name').value.trim();
+                const color = document.getElementById('pe-color').value;
+                const target = document.getElementById('pe-target').value === '' ? null : parseFloat(document.getElementById('pe-target').value);
+                const errEl = document.getElementById('editPieErr');
+
+                if (!newName) {
+                    errEl.textContent = 'Please enter a pie name.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                if (newName !== oldName && pies.some(p => p.name === newName)) {
+                    errEl.textContent = 'A pie with this name already exists.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                // Handle renaming in historical data
+                if (newName !== oldName) {
+                    historicalData.forEach(d => {
+                        if (d[oldName] !== undefined) {
+                            d[newName] = d[oldName];
+                            delete d[oldName];
+                        }
+                    });
+                }
+
+                pies[editingPieIndex].name = newName;
+                pies[editingPieIndex].color = color;
+                pies[editingPieIndex].targetAllocation = target;
+
+                closeModal('editPieModal');
+                await Promise.all([savePies(), saveHistory()]);
+                updateUI();
+            };
+
+            window.deletePieFromModal = async function() {
+                if (editingPieIndex === -1) return;
+                const pieName = pies[editingPieIndex].name;
+                if (confirm(`Are you sure you want to delete the pie "${pieName}"? This will also remove its historical yield data.`)) {
+                    pies.splice(editingPieIndex, 1);
+                    historicalData.forEach(d => {
+                        delete d[pieName];
+                    });
+                    closeModal('editPieModal');
+                    await Promise.all([savePies(), saveHistory()]);
+                    updateUI();
+                }
+            };
 
             // Initial Load
             async function initializeTracker() {
