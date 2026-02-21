@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6056832234894930" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7W30XZ23SC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-7W30XZ23SC');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Read the latest from Andy's Market Chronicle. Insights into AI trading, financial discipline, and the journey of building Overtime Live.">
+    <meta name="theme-color" content="#0a0e14">
+    <title>Blog — Dividend Tracker</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0e14;
+            --surface: #111621;
+            --surface-alt: #161d2b;
+            --border: #1e2840;
+            --green: #34d399;
+            --green-dim: #1a4a35;
+            --green-glow: rgba(52,211,153,0.15);
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --text-dim: #475569;
+            --red: #f87171;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        /* ─── NAV ─── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+            background: #0d1117; border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto; padding: 0 16px;
+            display: flex; align-items: center; justify-content: space-between; height: 56px;
+        }
+        .nav-brand { display: flex; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; }
+        .nav-brand img { height: 28px; width: 28px; }
+        .nav-brand span { color: var(--text); font-size: 18px; font-weight: 700; }
+
+        .hamburger {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; padding: 6px; transition: color 0.15s;
+        }
+        .hamburger:hover { color: var(--text); }
+        .hamburger svg { width: 22px; height: 22px; display: block; }
+
+        #menu {
+            display: none; position: fixed; top: 56px; right: 16px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            min-width: 180px; z-index: 40; overflow: hidden;
+        }
+        #menu.open { display: block; }
+        #menu a {
+            display: block; width: 100%; text-align: left;
+            padding: 12px 16px; color: var(--text-muted);
+            background: none; border: none; font-size: 14px;
+            cursor: pointer; text-decoration: none;
+            transition: all 0.15s; font-family: inherit;
+        }
+        #menu a:hover { background: var(--surface-alt); color: var(--text); }
+
+        /* ─── MAIN ─── */
+        .main { padding: 80px 16px 60px; }
+        .wrap { max-width: 680px; margin: 0 auto; }
+
+        .blog-header { margin-bottom: 40px; text-align: center; }
+        .blog-header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+        .blog-header p { color: var(--text-muted); font-size: 14px; }
+
+        /* ─── POST LIST ─── */
+        .post-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; margin-bottom: 24px;
+            cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+        }
+        .post-card:hover { transform: translateY(-2px); border-color: var(--green); }
+        .post-series { font-size: 10px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .post-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+        .post-excerpt { color: var(--text-muted); font-size: 15px; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .post-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); }
+        .post-meta span { display: flex; align-items: center; gap: 4px; }
+
+        /* ─── FULL POST ─── */
+        .full-post { display: none; }
+        .full-post.active { display: block; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--text-muted); font-size: 14px; font-weight: 600;
+            text-decoration: none; margin-bottom: 24px; cursor: pointer;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: var(--green); }
+        .post-content { font-size: 17px; line-height: 1.7; color: var(--text); }
+        .post-content p { margin-bottom: 1.5rem; }
+        .post-content h2 { font-size: 24px; font-weight: 700; margin: 2rem 0 1rem; color: var(--text); }
+        .post-content strong { color: var(--text); }
+        .post-content em { color: var(--text-muted); }
+        .post-content a { color: var(--green); text-decoration: none; }
+        .post-content a:hover { text-decoration: underline; }
+
+        .divider { height: 1px; background: var(--border); margin: 3rem 0; }
+
+        footer {
+            margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border);
+            text-align: center; color: var(--text-dim); font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <a href="index.html" class="nav-brand">
+            <img src="images/app-icon.png" alt="Dividend Tracker">
+            <span>Dividend Tracker</span>
+        </a>
+        <button class="hamburger" onclick="toggleMenu(event)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+    </div>
+</nav>
+<div id="menu">
+    <a href="index.html">Home</a>
+    <a href="blog.html">Blog</a>
+    <a href="tracker.html">Login 🔒</a>
+</div>
+
+<main class="main">
+    <div class="wrap">
+        <div id="blog-list-view">
+            <div class="blog-header">
+                <h1>Andy's Market Chronicle</h1>
+                <p>Exploring the math of money, AI trading, and financial discipline.</p>
+            </div>
+            <div id="post-list"></div>
+        </div>
+
+        <div id="full-post-view" class="full-post">
+            <a class="back-link" onclick="showList()">← Back to Blog</a>
+            <article>
+                <header style="margin-bottom: 32px;">
+                    <div id="f-series" class="post-series"></div>
+                    <h1 id="f-title" style="font-size: 36px; line-height: 1.2; margin-bottom: 16px;"></h1>
+                    <div class="post-meta">
+                        <span id="f-author"></span>
+                        <span id="f-date"></span>
+                    </div>
+                </header>
+                <div id="f-content" class="post-content"></div>
+                <div class="divider"></div>
+                <footer class="blog-footer">
+                    <p>&copy; 2025 Andy Enrique. All rights reserved.</p>
+                    <p style="margin-top: 8px; font-size: 11px;">
+                        This blog is for educational and entertainment purposes. It is not financial advice. Always consult a qualified financial advisor before making trading decisions.
+                    </p>
+                </footer>
+            </article>
+        </div>
+    </div>
+</main>
+
+<script>
+const blogPosts = [
+    {
+        id: 1,
+        title: "Can AI Help Me Become a Day Trader?",
+        series: "📊 Andy's Market Chronicle",
+        author: "Andy Enrique",
+        date: "February 2025",
+        excerpt: "Andy Enrique explores using AI for day trading while building the Overtime Live shift tracker. A real-time experiment in markets, money, and discipline.",
+        content: `
+            <p>I've been thinking about this question a lot lately. After building <strong>Overtime Live</strong>—an app that helps shift workers track every penny they earn from overtime—I've become obsessed with one thing: <em>the math of money</em>. Real-time earnings tracking showed me something powerful: when you can see your money grow in real-time, it changes your entire mindset about work.</p>
+            <p>But here's where it gets interesting. While tracking overtime earnings helped me build the discipline of financial awareness, I started wondering: what if I applied that same obsession to the markets? Not gambling. Not chasing get-rich-quick schemes. But using <strong>AI and data to make smarter trading decisions</strong>.</p>
+            <div style="background: var(--surface-alt); border-left: 4px solid var(--green); padding: 1.5rem; margin-bottom: 2rem; border-radius: 0 12px 12px 0;">
+                <p><strong>The Big Question:</strong> Can modern AI tools—large language models, sentiment analysis, pattern recognition, and real-time data—actually help a regular person become a profitable day trader? Or is this just another financial fantasy?</p>
+            </div>
+            <h2>Why I'm Exploring This</h2>
+            <p>Let me be honest: I'm not a finance expert. I'm a builder. I built Overtime Live because I saw a problem shift workers faced and I solved it. Now I'm turning that same lens to day trading.</p>
+            <p>The reason this matters isn't about getting rich quick. It's about understanding whether AI can democratize trading the way it's democratizing software development. Can an AI system help me:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; list-style-type: disc;">
+                <li style="margin-bottom: 0.75rem;">Analyze market sentiment in real-time?</li>
+                <li style="margin-bottom: 0.75rem;">Identify patterns humans miss?</li>
+                <li style="margin-bottom: 0.75rem;">Manage risk without emotion?</li>
+                <li style="margin-bottom: 0.75rem;">Make data-driven decisions faster than traditional traders?</li>
+            </ul>
+            <p>The shift workers using Overtime Live aren't trading stocks—they're trading their time and effort for money. But the principle is the same: <strong>work smarter, not just harder</strong>. That's what this exploration is about.</p>
+            <h2>The Experiment Begins</h2>
+            <p>I'm starting what I'm calling <strong>Andy's Market Chronicle</strong>—a series of blog posts where I'll document my journey into day trading with AI. This isn't financial advice (don't sue me). This is the raw story of:</p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; list-style-type: disc;">
+                <li style="margin-bottom: 0.75rem;">Tools I'm testing and why</li>
+                <li style="margin-bottom: 0.75rem;">Strategies I'm trying (the wins and losses)</li>
+                <li style="margin-bottom: 0.75rem;">How AI is changing the way I think about markets</li>
+                <li style="margin-bottom: 0.75rem;">Real results, real mistakes, real learning</li>
+            </ul>
+            <h2>You're Invited to Follow Along</h2>
+            <p>Whether you're curious about AI, fascinated by trading, or just here for the chaos of watching someone learn in real-time, I'd love to have you on this journey. I'll be sharing:</p>
+            <p><strong>📈 Weekly market thoughts</strong> — what I'm seeing, what AI is telling me, and what it means</p>
+            <p><strong>🤖 AI insights</strong> — how I'm using language models and tools to think differently about trading</p>
+            <p><strong>💰 Real P&L</strong> — wins, losses, and the brutal honesty in between (though I'll keep specifics anonymous for risk management)</p>
+            <p><strong>🛠️ Tools & frameworks</strong> — everything I build or discover that makes me a better trader</p>
+            <p>The goal? To answer one question through honest, transparent documentation: <strong>Can AI actually help someone become a profitable day trader?</strong></p>
+            <h2>But First—Let Me Teach You About Discipline</h2>
+            <p>Here's the thing: before I started this trading experiment, I learned something crucial from building Overtime Live. <strong>You can't manage money you can't see.</strong></p>
+            <p>That's why I built an app that lets shift workers track their overtime earnings in real-time. Because financial discipline starts with financial awareness. You can't grow wealth—whether from working extra hours or trading—if you don't know where every penny is going.</p>
+            <p>So here's my advice: whether you're following my trading journey or not, <strong>start tracking your money with precision</strong>. For shift workers, that means downloading Overtime Live and seeing exactly what those extra hours are worth. Because once you see your earnings grow in real-time, something shifts. You understand the value of your work differently. You become more intentional.</p>
+            <p>That's the foundation I'm building this trading experiment on.</p>
+            <p>Next time: I'll walk you through the AI tools I'm testing, why I chose them, and what they're already teaching me about markets.</p>
+            <p>Follow us on X <strong><a href="https://x.com/OvertimeLiveApp" target="_blank" rel="noopener" style="color: var(--green);">@OvertimeLiveApp</a></strong> to stay updated on the Market Chronicle and everything else we're building. This journey is just getting started.</p>
+        `
+    }
+];
+
+function toggleMenu(e){ e.stopPropagation(); document.getElementById('menu').classList.toggle('open'); }
+document.addEventListener('click', e => {
+    const m = document.getElementById('menu');
+    if (m && !m.contains(e.target) && !e.target.closest('.hamburger')) m.classList.remove('open');
+});
+
+function renderList() {
+    const list = document.getElementById('post-list');
+    list.innerHTML = blogPosts.map(post => `
+        <div class="post-card" onclick="showPost(${post.id})">
+            <div class="post-series">${post.series}</div>
+            <h2 class="post-title">${post.title}</h2>
+            <p class="post-excerpt">${post.excerpt}</p>
+            <div class="post-meta">
+                <span>✍️ ${post.author}</span>
+                <span>📅 ${post.date}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showPost(id) {
+    const post = blogPosts.find(p => p.id === id);
+    if (!post) return;
+
+    document.getElementById('f-series').innerText = post.series;
+    document.getElementById('f-title').innerText = post.title;
+    document.getElementById('f-author').innerText = '✍️ ' + post.author;
+    document.getElementById('f-date').innerText = '📅 ' + post.date;
+    document.getElementById('f-content').innerHTML = post.content;
+
+    document.getElementById('blog-list-view').style.display = 'none';
+    document.getElementById('full-post-view').classList.add('active');
+    window.scrollTo(0, 0);
+
+    // Update URL hash for sharing/back button
+    window.location.hash = 'post-' + id;
+}
+
+function showList() {
+    document.getElementById('blog-list-view').style.display = 'block';
+    document.getElementById('full-post-view').classList.remove('active');
+    window.scrollTo(0, 0);
+    window.location.hash = '';
+}
+
+// Handle browser back button and initial load with hash
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#post-')) {
+        const id = parseInt(hash.replace('#post-', ''));
+        showPost(id);
+    } else {
+        showList();
+    }
+});
+
+// Init
+renderList();
+if (window.location.hash.startsWith('#post-')) {
+    const id = parseInt(window.location.hash.replace('#post-', ''));
+    showPost(id);
+}
+</script>
+</body>
+</html>

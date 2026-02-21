@@ -238,7 +238,10 @@
         </div>
         <div id="pwErr" class="error">Incorrect password. Please try again.</div>
         <button class="btn-primary" onclick="checkPw()">Submit</button>
-        <a href="index.html" style="display: block; margin-top: 16px; text-align: center; text-decoration: none; color: var(--text-muted); font-size: 12px; transition: color 0.15s;">← Back to Public Demo</a>
+        <div style="margin-top: 16px; display: flex; justify-content: center; gap: 16px;">
+            <a href="index.html" style="text-decoration: none; color: var(--text-muted); font-size: 12px; transition: color 0.15s;">← Home</a>
+            <a href="blog.html" style="text-decoration: none; color: var(--text-muted); font-size: 12px; transition: color 0.15s;">Blog</a>
+        </div>
     </div>
 
     <!-- MENU MODAL -->
@@ -252,6 +255,10 @@
             </button>
             <button class="menu-btn" onclick="window.location.href='dividend-tracker.html'">
                 <span>📊 Dividend Tracker</span>
+                <span>→</span>
+            </button>
+            <button class="menu-btn" style="background: var(--surface-alt); color: var(--text-muted); box-shadow: none; border: 1px solid var(--border);" onclick="window.location.href='blog.html'">
+                <span>📝 Blog</span>
                 <span>→</span>
             </button>
         </div>
