@@ -314,6 +314,40 @@
             transform: translateX(20px);
             background-color: #0a0e14;
         }
+
+        /* ─── CHART ─── */
+        .chart-container {
+            background: var(--surface); border-radius: 14px;
+            border: 1px solid var(--border); padding: 20px;
+            margin-bottom: 24px;
+        }
+        .chart-title {
+            font-size: 10px; font-weight: 700; color: var(--green);
+            text-transform: uppercase; letter-spacing: 1.6px; margin-bottom: 20px;
+        }
+        .chart-scroll {
+            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;
+            scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+        }
+        .chart-scroll::-webkit-scrollbar { height: 6px; }
+        .chart-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        .chart-bar-wrap {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            min-width: 60px; flex-shrink: 0;
+        }
+        .chart-val { font-size: 11px; font-weight: 700; color: var(--text); }
+        .chart-bar-bg {
+            width: 32px; height: 120px; background: var(--surface-alt);
+            border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .chart-bar-fill {
+            width: 100%; background: linear-gradient(to top, var(--green), #10b981);
+            border-radius: 4px; transition: height 0.5s ease;
+            box-shadow: 0 0 10px var(--green-glow);
+        }
+        .chart-date { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -419,11 +453,15 @@
         </div>
         <div id="combined"></div>
         <div id="cards"></div>
+        <div id="monthlyChart" class="chart-container" style="display:none">
+            <div class="chart-title">Monthly Progress</div>
+            <div id="chartBars" class="chart-scroll"></div>
+        </div>
     </div>
 </div>
 
 <script>
-let portfolios = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, topupIncluded = true, editingId = null, lastStats = null;
+let portfolios = [], monthlyHistory = [], combinedGoal = 0, combinedGoalName = '', combinedGoal2 = 0, combinedGoal2Name = '', combinedGoal3 = 0, combinedGoal3Name = '', combinedTopUp = 0, topupIncluded = true, editingId = null, lastStats = null;
 const WH = 2080; // 52 weeks × 8 hr days
 
 const fmt = n => '£' + Math.floor(n).toLocaleString('en-GB');
@@ -448,6 +486,7 @@ async function load() {
         const j = await r.json();
         if (j.data) {
             portfolios = j.data.portfolios || [];
+            monthlyHistory = j.data.monthlyHistory || [];
             combinedGoal = j.data.combinedGoal || 0;
             combinedGoalName = j.data.combinedGoalName || '';
             combinedGoal2 = j.data.combinedGoal2 || 0;
@@ -463,9 +502,26 @@ async function save() {
     try {
         await fetch('/api/portfolioData', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ portfolios, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, topupIncluded })
+            body: JSON.stringify({ portfolios, monthlyHistory, combinedGoal, combinedGoalName, combinedGoal2, combinedGoal2Name, combinedGoal3, combinedGoal3Name, combinedTopUp, topupIncluded })
         });
     } catch(e){ console.error(e); }
+}
+
+function updateMonthlyHistory(amount) {
+    if (amount <= 0) return;
+    const now = new Date();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = monthNames[now.getMonth()] + ' ' + (now.getFullYear() % 100);
+    if (monthlyHistory.length === 0 || monthlyHistory[0].date !== currentMonth) {
+        monthlyHistory.unshift({ date: currentMonth, amount: amount });
+    } else {
+        monthlyHistory[0].amount = amount;
+    }
+}
+
+function calcMonthly() {
+    const totA = portfolios.reduce((s,p)=>s+(p.isFixed ? p.fixedDividend : p.totalInvested*(p.yieldPercent/100)),0);
+    return totA / 12;
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
@@ -535,6 +591,7 @@ function doAdd(){
         if(!n||!i||!y) return;
     }
     portfolios.push({id:nid(), name:n, totalInvested:i, yieldPercent:y, isFixed:isF, fixedDividend:fv, goal:g});
+    updateMonthlyHistory(calcMonthly());
     close('addModal'); save(); render();
 }
 
@@ -567,6 +624,7 @@ function doEdit(){
         p.name=n; p.totalInvested=i; p.yieldPercent=y;
         p.isFixed=isF; p.fixedDividend=fv; p.goal=g;
     }
+    updateMonthlyHistory(calcMonthly());
     close('editModal'); save(); render();
 }
 
@@ -574,7 +632,9 @@ function doEdit(){
 function del(id){
     const p = portfolios.find(x => x.id === id);
     if (confirm(`Are you sure you want to delete the portfolio "${p.name}"?`)) {
-        portfolios=portfolios.filter(p=>p.id!==id); save(); render();
+        portfolios=portfolios.filter(p=>p.id!==id);
+        updateMonthlyHistory(calcMonthly());
+        save(); render();
     }
 }
 
@@ -638,7 +698,26 @@ function ring(pct, sz, sw){
 }
 
 // ── RENDER ───────────────────────────────────────────────────────────────────
-function render(){ renderCombined(); renderCards(); }
+function render(){ renderCombined(); renderChart(); renderCards(); }
+
+function renderChart() {
+    const el = document.getElementById('monthlyChart');
+    const barsEl = document.getElementById('chartBars');
+    if (!monthlyHistory.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+
+    const max = Math.max(...monthlyHistory.map(h => h.amount), 1);
+    barsEl.innerHTML = monthlyHistory.map(h => {
+        const height = (h.amount / max) * 100;
+        return `<div class="chart-bar-wrap">
+            <div class="chart-val">${fmt(h.amount)}</div>
+            <div class="chart-bar-bg">
+                <div class="chart-bar-fill" style="height:${height}%"></div>
+            </div>
+            <div class="chart-date">${h.date}</div>
+        </div>`;
+    }).join('');
+}
 
 function getGoalBlock(goal, name, totA, avg, topUp = 0) {
     if (goal <= 0) return '';
