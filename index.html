@@ -727,44 +727,47 @@ function renderChart() {
     const el = document.getElementById('monthlyChart');
     const barsEl = document.getElementById('chartBars');
 
-    // Always show if there are portfolios, even with no history
     if (!portfolios.length && !monthlyHistory.length) { el.style.display = 'none'; return; }
     el.style.display = 'block';
 
-    // 1. Calculate weighted average yield and fixed income
     const varInv = portfolios.reduce((s, p) => s + (p.isFixed ? 0 : p.totalInvested), 0);
     const varDiv = portfolios.reduce((s, p) => s + (p.isFixed ? 0 : p.totalInvested * (p.yieldPercent / 100)), 0);
     const avgYield = varInv > 0 ? (varDiv / varInv) * 100 : 0;
-    const monthlyYield = Math.pow(1 + avgYield / 100, 1 / 12) - 1;
+    const monthlyRate = avgYield / 100 / 12;
     const fixedMonthly = portfolios.reduce((s, p) => s + (p.isFixed ? p.fixedDividend / 12 : 0), 0);
     const topUp = topupIncluded ? combinedTopUp / 12 : 0;
 
-    // 2. Generate 12-month projection
-    let projections = [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let currentMonthData;
+    let startDate;
+
+    if (monthlyHistory.length) {
+        currentMonthData = { ...monthlyHistory[0], isProj: false };
+        const [m, y] = currentMonthData.date.split(' ');
+        startDate = new Date(2000 + parseInt(y), monthNames.indexOf(m), 1);
+    } else {
+        const now = new Date();
+        const dateStr = monthNames[now.getMonth()] + ' ' + (now.getFullYear() % 100);
+        currentMonthData = { date: dateStr, amount: calcMonthly(), isProj: false };
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    let projections = [currentMonthData];
     let currentVarInv = varInv;
 
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    let startDate = new Date();
-    if (monthlyHistory.length) {
-        const [m, y] = monthlyHistory[0].date.split(' ');
-        startDate = new Date(2000 + parseInt(y), monthNames.indexOf(m), 1);
-    }
+    for (let i = 1; i < 12; i++) {
+        const prevVarDiv = currentVarInv * monthlyRate;
+        currentVarInv += prevVarDiv + topUp;
 
-    for (let i = 1; i <= 12; i++) {
         const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
         const dateStr = monthNames[d.getMonth()] + ' ' + (d.getFullYear() % 100);
-
-        const monthlyDiv = (currentVarInv * monthlyYield) + fixedMonthly;
+        const monthlyDiv = (currentVarInv * monthlyRate) + fixedMonthly;
         projections.push({ date: dateStr, amount: monthlyDiv, isProj: true });
-
-        // Reinvest variable dividends + top-up
-        currentVarInv += (currentVarInv * monthlyYield) + topUp;
     }
 
-    const allData = [...projections.reverse(), ...monthlyHistory];
-    const max = Math.max(...allData.map(h => h.amount), 1);
+    const max = Math.max(...projections.map(h => h.amount), 1);
 
-    barsEl.innerHTML = allData.map(h => {
+    barsEl.innerHTML = projections.map(h => {
         const height = (h.amount / max) * 100;
         return `<div class="chart-bar-wrap">
             <div class="chart-val">${fmt(h.amount)}</div>
