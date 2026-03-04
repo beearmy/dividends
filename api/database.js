@@ -75,10 +75,16 @@ async function createTables() {
         console.log('Connected to the Vercel Postgres database and tables are set up.');
     } catch (error) {
         console.error('Error setting up the database:', error);
-        throw error;
+        // throw error; // Don't throw to avoid crashing the serverless function
     }
 }
 
-createTables();
+// Optimization: Initialization is usually only needed once on cold start
+// In Vercel, this is fine, but we can also wrap it or export it.
+let initPromise = null;
+const ensureInit = () => {
+    if (!initPromise) initPromise = createTables();
+    return initPromise;
+};
 
-module.exports = { sql };
+module.exports = { sql, ensureInit };
