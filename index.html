@@ -348,7 +348,33 @@
             border-radius: 4px; transition: height 0.5s ease;
             box-shadow: 0 0 10px var(--green-glow);
         }
+        .chart-bar-fill.projected {
+            background: transparent;
+            border: 2px solid var(--green);
+            box-shadow: none;
+        }
         .chart-date { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+
+        /* ─── TOOLTIP ─── */
+        .info-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 1px solid var(--text-muted); color: var(--text-muted);
+            font-size: 9px; font-weight: 700; cursor: pointer;
+            margin-left: 6px; vertical-align: middle; transition: all 0.15s;
+        }
+        .info-btn:hover { border-color: var(--green); color: var(--green); }
+        .chart-title-wrap { display: flex; align-items: center; margin-bottom: 20px; position: relative; }
+        .chart-title-wrap .chart-title { margin-bottom: 0; }
+        .info-tooltip {
+            display: none; position: absolute; bottom: calc(100% + 10px); left: 0;
+            background: var(--surface-alt); border: 1px solid var(--border);
+            padding: 12px; border-radius: 8px; width: 240px; z-index: 100;
+            font-size: 11px; color: var(--text-muted); line-height: 1.5;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .info-tooltip.open { display: block; }
+        .info-tooltip strong { color: var(--text); }
     </style>
 </head>
 <body>
@@ -441,7 +467,21 @@
         <div id="combined"></div>
         <div id="cards"></div>
         <div id="monthlyChart" class="chart-container" style="display:none">
-            <div class="chart-title">Monthly Progress</div>
+            <div class="chart-title-wrap">
+                <div class="chart-title">Monthly Progress</div>
+                <div class="info-btn" onclick="toggleChartInfo(event)">i</div>
+                <div id="chartInfo" class="info-tooltip">
+                    <strong>12-Month Projection</strong><br>
+                    Estimated future growth based on:
+                    <ul style="margin: 6px 0 6px 16px;">
+                        <li>Dividends reinvested monthly</li>
+                        <li>Weighted average yield of variable portfolios</li>
+                        <li>Yearly top-ups (if toggled on)</li>
+                        <li>Fixed portfolios (included but no growth)</li>
+                    </ul>
+                    Outlined bars indicate predictions.
+                </div>
+            </div>
             <div id="chartBars" class="chart-scroll"></div>
         </div>
     </div>
@@ -674,19 +714,62 @@ function ring(pct, sz, sw){
 // ── RENDER ───────────────────────────────────────────────────────────────────
 function render(){ renderCombined(); renderChart(); renderCards(); }
 
+function toggleChartInfo(e) {
+    e.stopPropagation();
+    document.getElementById('chartInfo').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+    const info = document.getElementById('chartInfo');
+    if (info) info.classList.remove('open');
+});
+
 function renderChart() {
     const el = document.getElementById('monthlyChart');
     const barsEl = document.getElementById('chartBars');
-    if (!monthlyHistory.length) { el.style.display = 'none'; return; }
+
+    // Always show if there are portfolios, even with no history
+    if (!portfolios.length && !monthlyHistory.length) { el.style.display = 'none'; return; }
     el.style.display = 'block';
 
-    const max = Math.max(...monthlyHistory.map(h => h.amount), 1);
-    barsEl.innerHTML = monthlyHistory.map(h => {
+    // 1. Calculate weighted average yield and fixed income
+    const varInv = portfolios.reduce((s, p) => s + (p.isFixed ? 0 : p.totalInvested), 0);
+    const varDiv = portfolios.reduce((s, p) => s + (p.isFixed ? 0 : p.totalInvested * (p.yieldPercent / 100)), 0);
+    const avgYield = varInv > 0 ? (varDiv / varInv) * 100 : 0;
+    const monthlyYield = Math.pow(1 + avgYield / 100, 1 / 12) - 1;
+    const fixedMonthly = portfolios.reduce((s, p) => s + (p.isFixed ? p.fixedDividend / 12 : 0), 0);
+    const topUp = topupIncluded ? combinedTopUp / 12 : 0;
+
+    // 2. Generate 12-month projection
+    let projections = [];
+    let currentVarInv = varInv;
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let startDate = new Date();
+    if (monthlyHistory.length) {
+        const [m, y] = monthlyHistory[0].date.split(' ');
+        startDate = new Date(2000 + parseInt(y), monthNames.indexOf(m), 1);
+    }
+
+    for (let i = 1; i <= 12; i++) {
+        const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+        const dateStr = monthNames[d.getMonth()] + ' ' + (d.getFullYear() % 100);
+
+        const monthlyDiv = (currentVarInv * monthlyYield) + fixedMonthly;
+        projections.push({ date: dateStr, amount: monthlyDiv, isProj: true });
+
+        // Reinvest variable dividends + top-up
+        currentVarInv += (currentVarInv * monthlyYield) + topUp;
+    }
+
+    const allData = [...projections.reverse(), ...monthlyHistory];
+    const max = Math.max(...allData.map(h => h.amount), 1);
+
+    barsEl.innerHTML = allData.map(h => {
         const height = (h.amount / max) * 100;
         return `<div class="chart-bar-wrap">
             <div class="chart-val">${fmt(h.amount)}</div>
             <div class="chart-bar-bg">
-                <div class="chart-bar-fill" style="height:${height}%"></div>
+                <div class="chart-bar-fill${h.isProj ? ' projected' : ''}" style="height:${height}%"></div>
             </div>
             <div class="chart-date">${h.date}</div>
         </div>`;
