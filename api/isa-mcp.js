@@ -9,8 +9,8 @@ app.use(express.json());
 // ─── Configuration ───────────────────────────────────────────────
 const T212_BASE = 'https://live.trading212.com/api/v0';
 const MAX_RETRIES = 3;
-const SEED_MAX_PAGES = 15;
-const BACKFILL_PAGES = 5;
+const SEED_MAX_PAGES = 4;      // ~200 records, fits in 45s with rate limits
+const BACKFILL_PAGES = 3;      // Gradually fills history over multiple calls
 const INMEM_TTL_MS = 5 * 60 * 1000;
 
 function getAuthHeader() {
@@ -574,7 +574,7 @@ app.post('/api/mcp/isa', async (req, res) => {
     switch (method) {
       case 'initialize':
         result = { protocolVersion: '2024-11-05', capabilities: { tools: {} },
-          serverInfo: { name: 'Trading 212 ISA', version: '3.0.0' } };
+          serverInfo: { name: 'Trading 212 ISA', version: '3.0.1' } };
         break;
       case 'notifications/initialized':
         return res.status(204).end();
@@ -605,7 +605,7 @@ app.post('/api/mcp/isa', async (req, res) => {
 app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
-    name: 'Trading 212 ISA', version: '3.0.0',
+    name: 'Trading 212 ISA', version: '3.0.1',
     features: ['incremental-sync', 'postgres-cache', 'rate-limiting', 'auto-retry', 'fire-tracking', 'total-return'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
