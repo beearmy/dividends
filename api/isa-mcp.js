@@ -168,6 +168,16 @@ async function getCachedHistory(type, apiPath) {
     return { items, synced: fullySynced, count: items.length, newRecords: items.length, backfilled: 0 };
   }
 
+  // === SKIP if recently synced (data is in Postgres, no need to hit T212) ===
+  const lastSynced = cached.last_synced ? new Date(cached.last_synced).getTime() : 0;
+  if (Date.now() - lastSynced < INMEM_TTL_MS) {
+    const existingData = cached.data || [];
+    return {
+      items: existingData, synced: cached.fully_synced, count: existingData.length,
+      newRecords: 0, backfilled: 0,
+    };
+  }
+
   // === INCREMENTAL: Fetch new records from the top ===
   const existingData = cached.data || [];
   const knownRefs = new Set(existingData.map(item => getRef(item, type)).filter(Boolean));
