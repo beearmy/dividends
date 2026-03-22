@@ -64,15 +64,16 @@ async function t212Fetch(path) {
   throw lastError || new Error(`T212 failed after ${MAX_RETRIES} retries`);
 }
 
-async function t212Paginated(path, limit = 50) {
+async function t212Paginated(path, limit = 50, maxPages = 6) {
   const cacheKey = `p:${path}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
   let items = [];
   let nextPath = `${path}?limit=${limit}`;
+  let page = 0;
 
-  while (nextPath) {
+  while (nextPath && page < maxPages) {
     let data, lastError;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const res = await fetch(`${T212_BASE}${nextPath}`, {
@@ -99,6 +100,7 @@ async function t212Paginated(path, limit = 50) {
     // Strip the prefix to avoid doubled path: /api/v0/api/v0/...
     const raw = data.nextPagePath || null;
     nextPath = raw ? raw.replace(/^\/api\/v0/, '') : null;
+    page++;
   }
 
   cacheSet(cacheKey, items);
@@ -536,7 +538,7 @@ app.post('/api/mcp/isa', async (req, res) => {
     switch (method) {
       case 'initialize':
         result = { protocolVersion: '2024-11-05', capabilities: { tools: {} },
-          serverInfo: { name: 'Trading 212 ISA', version: '2.1.0' } };
+          serverInfo: { name: 'Trading 212 ISA', version: '2.1.1' } };
         break;
       case 'notifications/initialized':
         return res.status(204).end();
@@ -567,7 +569,7 @@ app.post('/api/mcp/isa', async (req, res) => {
 app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
-    name: 'Trading 212 ISA', version: '2.1.0',
+    name: 'Trading 212 ISA', version: '2.1.1',
     features: ['rate-limiting', 'auto-retry', 'caching', 'fire-tracking', 'total-return'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
