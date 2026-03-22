@@ -8,16 +8,22 @@ app.use(express.json());
 
 // ─── Configuration ───────────────────────────────────────────────
 const T212_BASE = 'https://live.trading212.com/api/v0';
-const MAX_RETRIES = 3;
-const SEED_MAX_PAGES = 4;      // ~200 records, fits in 45s with rate limits
-const BACKFILL_PAGES = 3;      // Gradually fills history over multiple calls
+const MAX_RETRIES = 5;
+const SEED_MAX_PAGES = 4;      // ~200 records per seed
+const BACKFILL_PAGES = 2;      // Fewer pages to stay within rate limits
 const INMEM_TTL_MS = 5 * 60 * 1000;
+const PAGE_DELAY_MS = 11000;   // 6 req/60s = 10s min; 11s for safety
 
 function getAuthHeader() {
   const key = process.env.T212_ISA_API_KEY;
   const secret = process.env.T212_ISA_API_SECRET;
   if (!key || !secret) throw new Error('T212 ISA API credentials not configured');
   return `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}`;
+}
+
+// Detect Cloudflare WAF block (returns HTML 403 when rate limited hard)
+function isCloudflareBlock(status, text) {
+  return status === 403 && (text.includes('<!DOCTYPE') || text.includes('Cloudflare') || text.includes('<html'));
 }
 
 // ─── In-Memory Cache (positions/summary only) ────────────────────
@@ -30,7 +36,7 @@ function memGet(key) {
 }
 function memSet(key, data) { memCache.set(key, { data, ts: Date.now() }); }
 
-// ─── T212 Single Fetch (with retry) ─────────────────────────────
+// ─── T212 Single Fetch (with retry + CF 403 handling) ─────────────
 async function t212Fetch(path) {
   const cached = memGet(`f:${path}`);
   if (cached) return cached;
@@ -41,14 +47,20 @@ async function t212Fetch(path) {
     });
     if (res.status === 429) {
       const reset = res.headers.get('x-ratelimit-reset');
-      const wait = reset ? Math.max(0, (parseInt(reset) * 1000) - Date.now()) + 500 : (attempt + 1) * 2000;
+      const wait = reset ? Math.max(0, (parseInt(reset) * 1000) - Date.now()) + 500 : (attempt + 1) * 5000;
       await new Promise(r => setTimeout(r, wait));
       continue;
     }
     if (!res.ok) {
       const text = await res.text();
+      if (isCloudflareBlock(res.status, text)) {
+        // CF WAF block = aggressive rate limit; wait longer and retry
+        const wait = (attempt + 1) * 15000;
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
       lastError = new Error(`T212 ${res.status}: ${text}`);
-      if (res.status >= 500) { await new Promise(r => setTimeout(r, (attempt + 1) * 1000)); continue; }
+      if (res.status >= 500) { await new Promise(r => setTimeout(r, (attempt + 1) * 2000)); continue; }
       throw lastError;
     }
     const data = await res.json();
@@ -58,7 +70,7 @@ async function t212Fetch(path) {
   throw lastError || new Error(`T212 failed after ${MAX_RETRIES} retries`);
 }
 
-// ─── T212 Single Page Fetch ─────────────────────────────────────
+// ─── T212 Single Page Fetch (with retry + CF 403 handling) ────────
 async function t212FetchPage(pagePath) {
   let lastError;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -67,14 +79,19 @@ async function t212FetchPage(pagePath) {
     });
     if (res.status === 429) {
       const reset = res.headers.get('x-ratelimit-reset');
-      const wait = reset ? Math.max(0, (parseInt(reset) * 1000) - Date.now()) + 500 : (attempt + 1) * 2000;
+      const wait = reset ? Math.max(0, (parseInt(reset) * 1000) - Date.now()) + 500 : (attempt + 1) * 5000;
       await new Promise(r => setTimeout(r, wait));
       continue;
     }
     if (!res.ok) {
       const text = await res.text();
+      if (isCloudflareBlock(res.status, text)) {
+        const wait = (attempt + 1) * 15000;
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
       lastError = new Error(`T212 ${res.status}: ${text}`);
-      if (res.status >= 500) { await new Promise(r => setTimeout(r, (attempt + 1) * 1000)); continue; }
+      if (res.status >= 500) { await new Promise(r => setTimeout(r, (attempt + 1) * 2000)); continue; }
       throw lastError;
     }
     const data = await res.json();
@@ -139,6 +156,7 @@ async function getCachedHistory(type, apiPath) {
     let nextPath = `${apiPath}?limit=50`;
     let pages = 0;
     while (nextPath && pages < SEED_MAX_PAGES) {
+      if (pages > 0) await new Promise(r => setTimeout(r, PAGE_DELAY_MS));
       const page = await t212FetchPage(nextPath);
       items = items.concat(page.items);
       nextPath = page.nextPath;
@@ -156,8 +174,10 @@ async function getCachedHistory(type, apiPath) {
   let newItems = [];
   let nextPath = `${apiPath}?limit=50`;
   let foundOverlap = false;
+  let incPages = 0;
 
   while (nextPath && !foundOverlap) {
+    if (incPages > 0) await new Promise(r => setTimeout(r, PAGE_DELAY_MS));
     const page = await t212FetchPage(nextPath);
     for (const item of page.items) {
       if (knownRefs.has(getRef(item, type))) {
@@ -167,6 +187,7 @@ async function getCachedHistory(type, apiPath) {
       newItems.push(item);
     }
     nextPath = foundOverlap ? null : page.nextPath;
+    incPages++;
   }
 
   // === BACKFILL: Continue loading older pages if not fully synced ===
@@ -175,6 +196,7 @@ async function getCachedHistory(type, apiPath) {
   if (continuationPath && !cached.fully_synced) {
     let pages = 0;
     while (continuationPath && pages < BACKFILL_PAGES) {
+      if (pages > 0 || incPages > 0) await new Promise(r => setTimeout(r, PAGE_DELAY_MS));
       const page = await t212FetchPage(continuationPath);
       backfillItems = backfillItems.concat(page.items);
       continuationPath = page.nextPath;
@@ -284,10 +306,8 @@ async function handleTool(name, args) {
     }
 
     case 'get_isa_income_analysis': {
-      const [divResult, summary] = await Promise.all([
-        getCachedHistory('dividends', '/equity/history/dividends'),
-        t212Fetch('/equity/account/summary'),
-      ]);
+      const divResult = await getCachedHistory('dividends', '/equity/history/dividends');
+      const summary = await t212Fetch('/equity/account/summary');
       const divs = divResult.items;
       const byTicker = {}, byMonth = {}, byYear = {};
       for (const d of divs) {
@@ -334,11 +354,9 @@ async function handleTool(name, args) {
     }
 
     case 'get_isa_portfolio_performance': {
-      const [positions, divResult, summary] = await Promise.all([
-        t212Fetch('/equity/positions'),
-        getCachedHistory('dividends', '/equity/history/dividends'),
-        t212Fetch('/equity/account/summary'),
-      ]);
+      const positions = await t212Fetch('/equity/positions');
+      const divResult = await getCachedHistory('dividends', '/equity/history/dividends');
+      const summary = await t212Fetch('/equity/account/summary');
       const divByTicker = {};
       for (const d of divResult.items) {
         const tk = d.ticker || d.instrument?.ticker;
@@ -424,11 +442,10 @@ async function handleTool(name, args) {
       if (!mvl || mvl <= 0) throw new Error('mvlMonthly required');
       const tgtYld = (args?.targetYield || 5.5) / 100;
       const moContrib = args?.monthlyContribution || 0;
-      const [divResult, summary, txnResult] = await Promise.all([
-        getCachedHistory('dividends', '/equity/history/dividends'),
-        t212Fetch('/equity/account/summary'),
-        getCachedHistory('transactions', '/equity/history/transactions'),
-      ]);
+      // Serialise: history endpoints share a 6 req/60s rate limit
+      const summary = await t212Fetch('/equity/account/summary');
+      const divResult = await getCachedHistory('dividends', '/equity/history/dividends');
+      const txnResult = await getCachedHistory('transactions', '/equity/history/transactions');
       const divs = divResult.items;
       const txns = txnResult.items;
       const pv = summary?.totalValue || 0;
@@ -503,11 +520,10 @@ async function handleTool(name, args) {
     case 'get_isa_recent_activity': {
       const days = args?.days || 30;
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
-      const [orderResult, divResult, txnResult] = await Promise.all([
-        getCachedHistory('orders', '/equity/history/orders'),
-        getCachedHistory('dividends', '/equity/history/dividends'),
-        getCachedHistory('transactions', '/equity/history/transactions'),
-      ]);
+      // Serialise: history endpoints share a 6 req/60s rate limit
+      const orderResult = await getCachedHistory('orders', '/equity/history/orders');
+      const divResult = await getCachedHistory('dividends', '/equity/history/dividends');
+      const txnResult = await getCachedHistory('transactions', '/equity/history/transactions');
       const events = [];
       for (const o of orderResult.items) {
         const ord = o.order || o;
@@ -574,7 +590,7 @@ app.post('/api/mcp/isa', async (req, res) => {
     switch (method) {
       case 'initialize':
         result = { protocolVersion: '2024-11-05', capabilities: { tools: {} },
-          serverInfo: { name: 'Trading 212 ISA', version: '3.0.1' } };
+          serverInfo: { name: 'Trading 212 ISA', version: '3.1.0' } };
         break;
       case 'notifications/initialized':
         return res.status(204).end();
@@ -605,7 +621,7 @@ app.post('/api/mcp/isa', async (req, res) => {
 app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
-    name: 'Trading 212 ISA', version: '3.0.1',
+    name: 'Trading 212 ISA', version: '3.1.0',
     features: ['incremental-sync', 'postgres-cache', 'rate-limiting', 'auto-retry', 'fire-tracking', 'total-return'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
