@@ -12,6 +12,7 @@ const MAX_RETRIES = 5;
 const SEED_MAX_PAGES = 2;      // ~100 records per seed; keeps under 45s timeout
 const BACKFILL_PAGES = 2;      // Gradually fills history over multiple calls
 const INMEM_TTL_MS = 5 * 60 * 1000;
+const SYNCED_TTL_MS = 30 * 60 * 1000; // 30 min for fully-synced (CSV-seeded) caches
 const PAGE_DELAY_MS = 11000;   // 6 req/60s = 10s min; 11s for safety
 
 function getAuthHeader() {
@@ -170,7 +171,8 @@ async function getCachedHistory(type, apiPath) {
 
   // === SKIP if recently synced (data is in Postgres, no need to hit T212) ===
   const lastSynced = cached.last_synced ? new Date(cached.last_synced).getTime() : 0;
-  if (Date.now() - lastSynced < INMEM_TTL_MS) {
+  const ttl = cached.fully_synced ? SYNCED_TTL_MS : INMEM_TTL_MS;
+  if (Date.now() - lastSynced < ttl) {
     const existingData = cached.data || [];
     return {
       items: existingData, synced: cached.fully_synced, count: existingData.length,
