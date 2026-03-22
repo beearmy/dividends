@@ -577,12 +577,17 @@ async function handleTool(name, args) {
       const isaLimit = 20000;
       const tyStart = new Date(now.getFullYear(), 3, 6);
       if (now < tyStart) tyStart.setFullYear(tyStart.getFullYear() - 1);
-      const deposits = txns
-        .filter(t => {
-          const dt = new Date(t.dateTime || t.reference);
-          return dt >= tyStart && (t.type === 'DEPOSIT' || (t.amount && t.amount > 0));
-        })
+      const tyTxns = txns.filter(t => {
+        const dt = new Date(t.dateTime || t.reference);
+        return dt >= tyStart;
+      });
+      const grossDeposits = tyTxns
+        .filter(t => t.type === 'DEPOSIT')
         .reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+      const grossWithdrawals = tyTxns
+        .filter(t => t.type === 'WITHDRAWAL')
+        .reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+      const netContribution = grossDeposits - grossWithdrawals;
       return JSON.stringify({
         sync: { dividends: divResult.count, transactions: txnResult.count,
           divsSynced: divResult.synced, txnsSynced: txnResult.synced },
@@ -608,10 +613,14 @@ async function handleTool(name, args) {
           assumptions: `${r2(tgtYld * 100)}% yield, GBP${moContrib}/mo, dividends reinvested`,
         },
         isa: {
-          allowance: isaLimit, deposited: r2(deposits),
-          remaining: r2(isaLimit - deposits),
-          usedPct: r2((deposits / isaLimit) * 100),
+          allowance: isaLimit,
+          grossDeposits: r2(grossDeposits),
+          grossWithdrawals: r2(grossWithdrawals),
+          netContribution: r2(netContribution),
+          remaining: r2(isaLimit - netContribution),
+          usedPct: r2((netContribution / isaLimit) * 100),
           taxYearStart: tyStart.toISOString().split('T')[0],
+          note: 'T212 is a flexible ISA — net contribution (deposits minus withdrawals) counts against allowance',
         },
       }, null, 2);
     }
