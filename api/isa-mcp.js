@@ -221,6 +221,85 @@ async function getCachedHistory(type, apiPath) {
 
 function r2(n) { return Math.round(n * 100) / 100; }
 
+// ─── T212 CSV Export Parser ─────────────────────────────────────
+function parseT212Csv(csvText) {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { dividends: [], orders: [], transactions: [] };
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    // Handle quoted CSV fields
+    const vals = [];
+    let current = '';
+    let inQuote = false;
+    for (const ch of lines[i]) {
+      if (ch === '"') { inQuote = !inQuote; continue; }
+      if (ch === ',' && !inQuote) { vals.push(current.trim()); current = ''; continue; }
+      current += ch;
+    }
+    vals.push(current.trim());
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+    rows.push(row);
+  }
+  // Classify rows by Action field — T212 CSV uses "Action" column
+  const dividends = [];
+  const orders = [];
+  const transactions = [];
+  for (const row of rows) {
+    const action = (row['Action'] || '').toUpperCase();
+    const time = row['Time'] || row['Date'] || '';
+    const ticker = row['Ticker'] || '';
+    const amount = parseFloat(row['Total'] || row['Amount'] || '0') || 0;
+    const shares = parseFloat(row['No. of shares'] || row['Shares'] || '0') || 0;
+    const price = parseFloat(row['Price / share'] || row['Price'] || '0') || 0;
+    const currency = row['Currency (Total)'] || row['Currency'] || 'GBP';
+    const ref = row['ID'] || row['Order ID'] || `csv-${time}-${ticker}-${action}`;
+    if (action.includes('DIVIDEND') || action.includes('INTEREST') || action === 'LENDING INTEREST') {
+      dividends.push({
+        type: action.includes('INTEREST') ? 'INTEREST' : 'DIVIDEND',
+        amount: Math.abs(amount),
+        paidOn: time,
+        ticker: ticker,
+        currency: currency,
+        quantity: shares,
+        reference: ref,
+        instrument: { name: row['Name'] || '', ticker },
+      });
+    } else if (action.includes('BUY') || action.includes('SELL') || action === 'MARKET ORDER'
+               || action.includes('LIMIT') || action.includes('STOP')) {
+      orders.push({
+        order: {
+          id: ref,
+          createdAt: time,
+          side: action.includes('SELL') ? 'SELL' : 'BUY',
+          status: 'FILLED',
+          filledQuantity: shares,
+          filledValue: Math.abs(amount),
+          instrument: { ticker, name: row['Name'] || '' },
+        },
+        fill: { price, filledAt: time },
+        reference: ref,
+      });
+    } else if (action.includes('DEPOSIT') || action.includes('WITHDRAW') || action.includes('TRANSFER')
+               || action.includes('CONVERSION') || action === 'CASH COLLECTION') {
+      transactions.push({
+        type: action.includes('WITHDRAW') ? 'WITHDRAWAL' : 'DEPOSIT',
+        dateTime: time,
+        amount: amount,
+        reference: ref,
+      });
+    }
+    // Skip unknown action types silently
+  }
+  // Sort newest first (matching T212 API pagination order)
+  const byDate = (a, b) => new Date(b.paidOn || b.order?.createdAt || b.dateTime || 0) - new Date(a.paidOn || a.order?.createdAt || a.dateTime || 0);
+  dividends.sort(byDate);
+  orders.sort(byDate);
+  transactions.sort(byDate);
+  return { dividends, orders, transactions };
+}
+
 // ─── Tool Definitions ───────────────────────────────────────────
 const TOOLS = [
   { name: 'get_isa_summary',
@@ -269,6 +348,14 @@ const TOOLS = [
     description: 'Merged timeline: trades + dividends + transactions, newest first. Quick view of recent ISA activity.',
     inputSchema: { type: 'object', properties: {
       days: { type: 'number', description: 'Look back N days (default 30).' }
+    }, required: [] } },
+  { name: 'seed_isa_cache',
+    description: 'ONE-TIME SETUP: Request a CSV export from T212 containing ALL dividends, orders, and transactions. Returns a reportId. Then call seed_isa_status to check progress and import. Only needed once — after seeding, all tools work instantly.',
+    inputSchema: { type: 'object', properties: {}, required: [] } },
+  { name: 'seed_isa_status',
+    description: 'Check the status of a CSV export seed. When Finished, downloads and imports ALL history into cache. Call this after seed_isa_cache. May need to call a few times while T212 generates the report.',
+    inputSchema: { type: 'object', properties: {
+      reportId: { type: 'number', description: 'The reportId from seed_isa_cache. If omitted, checks the most recent report.' }
     }, required: [] } },
 ];
 
@@ -566,6 +653,83 @@ async function handleTool(name, args) {
       }, null, 2);
     }
 
+    case 'seed_isa_cache': {
+      // Request a CSV export containing all history from T212
+      const timeFrom = '2020-01-01T00:00:00Z';
+      const timeTo = new Date().toISOString();
+      const res = await fetch(`${T212_BASE}/equity/history/exports`, {
+        method: 'POST',
+        headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataIncluded: {
+            includeDividends: true,
+            includeInterest: true,
+            includeOrders: true,
+            includeTransactions: true,
+          },
+          timeFrom,
+          timeTo,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`T212 export request failed (${res.status}): ${text.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      return JSON.stringify({
+        status: 'EXPORT_REQUESTED',
+        reportId: data.reportId,
+        message: 'CSV export requested from T212. Call seed_isa_status to check progress — T212 usually takes 10-30 seconds to generate. Once Finished, it will auto-import into cache.',
+        timeFrom,
+        timeTo,
+      }, null, 2);
+    }
+
+    case 'seed_isa_status': {
+      // Check export status and import when ready
+      const reports = await t212Fetch('/equity/history/exports');
+      if (!reports || !Array.isArray(reports) || reports.length === 0) {
+        return JSON.stringify({ status: 'NO_REPORTS', message: 'No export reports found. Call seed_isa_cache first.' }, null, 2);
+      }
+      const targetId = args?.reportId;
+      const report = targetId
+        ? reports.find(r => r.reportId === targetId)
+        : reports[reports.length - 1]; // most recent
+      if (!report) {
+        return JSON.stringify({ status: 'NOT_FOUND', reportId: targetId, available: reports.map(r => r.reportId) }, null, 2);
+      }
+      if (report.status !== 'Finished') {
+        return JSON.stringify({
+          status: report.status,
+          reportId: report.reportId,
+          message: `Report is ${report.status}. Call seed_isa_status again in a few seconds.`,
+        }, null, 2);
+      }
+      // Download and parse the CSV
+      const csvRes = await fetch(report.downloadLink);
+      if (!csvRes.ok) throw new Error(`Failed to download CSV: ${csvRes.status}`);
+      const csvText = await csvRes.text();
+      const parsed = parseT212Csv(csvText);
+      // Save each type to Postgres
+      const results = {};
+      for (const type of ['dividends', 'orders', 'transactions']) {
+        const items = parsed[type] || [];
+        if (items.length > 0) {
+          const newestRef = getRef(items[0], type);
+          await dbSave(type, items, newestRef, null, true);
+          results[type] = { count: items.length, fullySynced: true };
+        } else {
+          results[type] = { count: 0, note: 'No records in CSV for this type' };
+        }
+      }
+      return JSON.stringify({
+        status: 'SEEDED',
+        reportId: report.reportId,
+        message: 'All history imported from CSV into Postgres cache. All tools should now work instantly.',
+        results,
+      }, null, 2);
+    }
+
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -590,7 +754,7 @@ app.post('/api/mcp/isa', async (req, res) => {
     switch (method) {
       case 'initialize':
         result = { protocolVersion: '2024-11-05', capabilities: { tools: {} },
-          serverInfo: { name: 'Trading 212 ISA', version: '3.1.0' } };
+          serverInfo: { name: 'Trading 212 ISA', version: '3.2.0' } };
         break;
       case 'notifications/initialized':
         return res.status(204).end();
@@ -621,7 +785,7 @@ app.post('/api/mcp/isa', async (req, res) => {
 app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
-    name: 'Trading 212 ISA', version: '3.1.0',
+    name: 'Trading 212 ISA', version: '3.2.0',
     features: ['incremental-sync', 'postgres-cache', 'rate-limiting', 'auto-retry', 'fire-tracking', 'total-return'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
