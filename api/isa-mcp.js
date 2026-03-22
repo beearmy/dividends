@@ -654,9 +654,13 @@ async function handleTool(name, args) {
     }
 
     case 'seed_isa_cache': {
-      // Request a CSV export containing all history from T212
-      const timeFrom = '2020-01-01T00:00:00Z';
-      const timeTo = new Date().toISOString();
+      // Request CSV exports from T212 — max 1 year per request
+      // Request last 12 months (covers most recent activity)
+      const now = new Date();
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const timeFrom = oneYearAgo.toISOString();
+      const timeTo = now.toISOString();
       const res = await fetch(`${T212_BASE}/equity/history/exports`, {
         method: 'POST',
         headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
