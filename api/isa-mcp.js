@@ -786,9 +786,33 @@ app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
     name: 'Trading 212 ISA', version: '3.2.0',
-    features: ['incremental-sync', 'postgres-cache', 'rate-limiting', 'auto-retry', 'fire-tracking', 'total-return'],
+    features: ['incremental-sync', 'postgres-cache', 'rate-limiting', 'auto-retry', 'fire-tracking', 'total-return', 'csv-seed'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
+});
+
+// ─── Direct HTTP Seed Endpoints (no MCP needed) ─────────────────
+// Step 1: GET /api/mcp/isa/seed — request CSV export from T212
+app.get('/api/mcp/isa/seed', async (req, res) => {
+  if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const result = await handleTool('seed_isa_cache', {});
+    res.json(JSON.parse(result));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Step 2: GET /api/mcp/isa/seed/status — check & import when ready
+app.get('/api/mcp/isa/seed/status', async (req, res) => {
+  if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const reportId = req.query.reportId ? parseInt(req.query.reportId) : undefined;
+    const result = await handleTool('seed_isa_status', { reportId });
+    res.json(JSON.parse(result));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = app;
