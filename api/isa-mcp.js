@@ -179,17 +179,17 @@ async function handleTool(name, args) {
       return JSON.stringify(await t212Fetch('/equity/positions'), null, 2);
 
     case 'get_isa_dividends': {
-      const items = await t212Paginated('/history/dividends', args?.limit || 50);
+      const items = await t212Paginated('/equity/history/dividends', args?.limit || 50);
       return JSON.stringify({ count: items.length, dividends: items }, null, 2);
     }
 
     case 'get_isa_orders': {
-      const items = await t212Paginated('/history/orders', args?.limit || 50);
+      const items = await t212Paginated('/equity/history/orders', args?.limit || 50);
       return JSON.stringify({ count: items.length, orders: items }, null, 2);
     }
 
     case 'get_isa_transactions': {
-      const items = await t212Paginated('/history/transactions', args?.limit || 50);
+      const items = await t212Paginated('/equity/history/transactions', args?.limit || 50);
       return JSON.stringify({ count: items.length, transactions: items }, null, 2);
     }
 
@@ -199,7 +199,7 @@ async function handleTool(name, args) {
     // === Income Analysis ===
     case 'get_isa_income_analysis': {
       const [divs, summary] = await Promise.all([
-        t212Paginated('/history/dividends', 50),
+        t212Paginated('/equity/history/dividends', 50),
         t212Fetch('/equity/account/summary'),
       ]);
 
@@ -259,7 +259,7 @@ async function handleTool(name, args) {
     case 'get_isa_portfolio_performance': {
       const [positions, divs, summary] = await Promise.all([
         t212Fetch('/equity/positions'),
-        t212Paginated('/history/dividends', 50),
+        t212Paginated('/equity/history/dividends', 50),
         t212Fetch('/equity/account/summary'),
       ]);
 
@@ -356,9 +356,9 @@ async function handleTool(name, args) {
       const moContrib = args?.monthlyContribution || 0;
 
       const [divs, summary, txns] = await Promise.all([
-        t212Paginated('/history/dividends', 50),
+        t212Paginated('/equity/history/dividends', 50),
         t212Fetch('/equity/account/summary'),
-        t212Paginated('/history/transactions', 50),
+        t212Paginated('/equity/history/transactions', 50),
       ]);
 
       const pv = summary?.totalValue || summary?.total || 0;
@@ -446,9 +446,9 @@ async function handleTool(name, args) {
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
 
       const [orders, divs, txns] = await Promise.all([
-        t212Paginated('/history/orders', 50),
-        t212Paginated('/history/dividends', 50),
-        t212Paginated('/history/transactions', 50),
+        t212Paginated('/equity/history/orders', 50),
+        t212Paginated('/equity/history/dividends', 50),
+        t212Paginated('/equity/history/transactions', 50),
       ]);
 
       const events = [];
