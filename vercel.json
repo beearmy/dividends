@@ -24,6 +24,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/mcp/isa/:path*",
+      "destination": "/api/isa-mcp.js"
+    },
+    {
       "source": "/api/mcp/isa",
       "destination": "/api/isa-mcp.js"
     },
