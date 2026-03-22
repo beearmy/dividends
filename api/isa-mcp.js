@@ -9,8 +9,8 @@ app.use(express.json());
 // ─── Configuration ───────────────────────────────────────────────
 const T212_BASE = 'https://live.trading212.com/api/v0';
 const MAX_RETRIES = 5;
-const SEED_MAX_PAGES = 4;      // ~200 records per seed
-const BACKFILL_PAGES = 2;      // Fewer pages to stay within rate limits
+const SEED_MAX_PAGES = 2;      // ~100 records per seed; keeps under 45s timeout
+const BACKFILL_PAGES = 2;      // Gradually fills history over multiple calls
 const INMEM_TTL_MS = 5 * 60 * 1000;
 const PAGE_DELAY_MS = 11000;   // 6 req/60s = 10s min; 11s for safety
 
