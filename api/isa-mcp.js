@@ -553,4 +553,19 @@ app.get('/api/mcp/isa', (req, res) => {
   });
 });
 
+// Temporary debug endpoint — remove after diagnosis
+app.get('/api/mcp/isa/debug', async (req, res) => {
+  if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const testUrl = `${T212_BASE}/equity/history/dividends?limit=2`;
+  try {
+    const r = await fetch(testUrl, {
+      headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+    });
+    const body = await r.text();
+    res.json({ url: testUrl, status: r.status, statusText: r.statusText, body, authHeader: getAuthHeader().slice(0, 20) + '...' });
+  } catch (e) {
+    res.json({ url: testUrl, error: e.message });
+  }
+});
+
 module.exports = app;
