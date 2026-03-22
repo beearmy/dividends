@@ -95,7 +95,10 @@ async function t212Paginated(path, limit = 50) {
     }
     if (!data) throw lastError || new Error('Paginated fetch failed');
     if (data.items) items = items.concat(data.items);
-    nextPath = data.nextPagePath || null;
+    // T212 returns nextPagePath as '/api/v0/equity/...' but T212_BASE already contains '/api/v0'
+    // Strip the prefix to avoid doubled path: /api/v0/api/v0/...
+    const raw = data.nextPagePath || null;
+    nextPath = raw ? raw.replace(/^\/api\/v0/, '') : null;
   }
 
   cacheSet(cacheKey, items);
@@ -263,20 +266,24 @@ async function handleTool(name, args) {
         t212Fetch('/equity/account/summary'),
       ]);
 
+      // Dividends use top-level d.ticker; positions use p.instrument.ticker
       const divByTicker = {};
       for (const d of divs) {
-        divByTicker[d.ticker] = (divByTicker[d.ticker] || 0) + (d.amount || 0);
+        const tk = d.ticker || d.instrument?.ticker;
+        if (tk) divByTicker[tk] = (divByTicker[tk] || 0) + (d.amount || 0);
       }
 
       const perf = (positions || []).map(p => {
-        const val = p.currentPrice * p.quantity;
-        const cost = p.averagePrice * p.quantity;
-        const capPnL = p.ppl || (val - cost);
-        const divRcvd = divByTicker[p.ticker] || 0;
+        const ticker = p.instrument?.ticker || p.ticker || 'UNKNOWN';
+        const name = p.instrument?.name || '';
+        // Use walletImpact for GBP values
+        const val = p.walletImpact?.currentValue || 0;
+        const cost = p.walletImpact?.totalCost || 0;
+        const capPnL = p.walletImpact?.unrealizedProfitLoss || 0;
+        const divRcvd = divByTicker[ticker] || 0;
         const totalRet = capPnL + divRcvd;
         return {
-          ticker: p.ticker, quantity: p.quantity,
-          avgPrice: r2(p.averagePrice), currentPrice: r2(p.currentPrice),
+          ticker, name, quantity: p.quantity,
           currentValue: r2(val), costBasis: r2(cost),
           capitalPnL: r2(capPnL), capitalPnLPct: cost > 0 ? r2((capPnL / cost) * 100) : 0,
           dividendsReceived: r2(divRcvd),
@@ -289,7 +296,7 @@ async function handleTool(name, args) {
 
       const totCap = perf.reduce((s, p) => s + p.capitalPnL, 0);
       const totDiv = perf.reduce((s, p) => s + p.dividendsReceived, 0);
-      const pv = summary?.totalValue || summary?.total || 0;
+      const pv = summary?.totalValue || 0;
 
       // Income Factory health: how many positions have positive total return despite negative capital P&L
       const incomeRescued = perf.filter(p => p.capitalPnL < 0 && p.totalReturn > 0);
@@ -316,16 +323,24 @@ async function handleTool(name, args) {
         t212Fetch('/equity/account/summary'),
       ]);
 
-      const pv = summary?.totalValue || summary?.total || 0;
-      const cash = summary?.free || summary?.freeCash || 0;
+      const pv = summary?.totalValue || 0;
+      const cash = summary?.cash?.availableToTrade || 0;
+      const invested = summary?.investments?.totalCost || 0;
+      const unrealPnL = summary?.investments?.unrealizedProfitLoss || 0;
+      const realPnL = summary?.investments?.realizedProfitLoss || 0;
 
       const holdings = (positions || []).map(p => {
-        const val = p.currentPrice * p.quantity;
+        // Use walletImpact for GBP values (currentPrice is in instrument currency)
+        const val = p.walletImpact?.currentValue || 0;
+        const cost = p.walletImpact?.totalCost || 0;
+        const pnl = p.walletImpact?.unrealizedProfitLoss || 0;
+        const ticker = p.instrument?.ticker || p.ticker || 'UNKNOWN';
+        const name = p.instrument?.name || '';
         return {
-          ticker: p.ticker, quantity: p.quantity, currentValue: r2(val),
+          ticker, name, quantity: p.quantity, currentValue: r2(val),
           allocationPct: pv > 0 ? r2((val / pv) * 100) : 0,
-          pnl: r2(p.ppl || 0),
-          pnlPct: r2(p.pplPct || ((p.currentPrice - p.averagePrice) / p.averagePrice) * 100),
+          pnl: r2(pnl),
+          pnlPct: cost > 0 ? r2((pnl / cost) * 100) : 0,
         };
       }).sort((a, b) => b.currentValue - a.currentValue);
 
@@ -333,9 +348,10 @@ async function handleTool(name, args) {
 
       return JSON.stringify({
         account: {
-          totalValue: r2(pv), invested: r2(summary?.invested || 0),
+          totalValue: r2(pv), invested: r2(invested),
           cash: r2(cash), cashPct: pv > 0 ? r2((cash / pv) * 100) : 0,
-          totalPnL: r2(summary?.ppl || 0), totalPnLPct: r2(summary?.pplPct || 0),
+          unrealizedPnL: r2(unrealPnL), realizedPnL: r2(realPnL),
+          unrealizedPnLPct: invested > 0 ? r2((unrealPnL / invested) * 100) : 0,
           positionCount: holdings.length,
         },
         concentration: {
@@ -454,12 +470,16 @@ async function handleTool(name, args) {
       const events = [];
 
       for (const o of orders) {
-        const dt = new Date(o.dateCreated || o.dateExecuted || o.reference);
+        // New T212 API nests order data under o.order and o.fill
+        const ord = o.order || o;
+        const fill = o.fill || {};
+        const dt = new Date(ord.createdAt || fill.filledAt || ord.reference || o.reference);
         if (dt >= cutoff) events.push({
-          type: 'TRADE', date: dt.toISOString(), ticker: o.ticker,
-          action: o.type || (o.filledQuantity < 0 ? 'SELL' : 'BUY'),
-          quantity: o.filledQuantity || o.quantity,
-          price: o.filledPrice || o.limitPrice, value: o.filledValue, status: o.status,
+          type: 'TRADE', date: dt.toISOString(),
+          ticker: ord.instrument?.ticker || ord.ticker,
+          action: ord.side || (ord.filledQuantity < 0 ? 'SELL' : 'BUY'),
+          quantity: ord.filledQuantity || ord.quantity,
+          price: fill.price || ord.limitPrice, value: ord.filledValue, status: ord.status,
         });
       }
 
@@ -516,7 +536,7 @@ app.post('/api/mcp/isa', async (req, res) => {
     switch (method) {
       case 'initialize':
         result = { protocolVersion: '2024-11-05', capabilities: { tools: {} },
-          serverInfo: { name: 'Trading 212 ISA', version: '2.0.0' } };
+          serverInfo: { name: 'Trading 212 ISA', version: '2.1.0' } };
         break;
       case 'notifications/initialized':
         return res.status(204).end();
@@ -547,25 +567,10 @@ app.post('/api/mcp/isa', async (req, res) => {
 app.get('/api/mcp/isa', (req, res) => {
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
   res.json({
-    name: 'Trading 212 ISA', version: '2.0.0',
+    name: 'Trading 212 ISA', version: '2.1.0',
     features: ['rate-limiting', 'auto-retry', 'caching', 'fire-tracking', 'total-return'],
     tools: TOOLS.map(t => t.name), status: 'ok',
   });
-});
-
-// Temporary debug endpoint — remove after diagnosis
-app.get('/api/mcp/isa/debug', async (req, res) => {
-  if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
-  const testUrl = `${T212_BASE}/equity/history/dividends?limit=2`;
-  try {
-    const r = await fetch(testUrl, {
-      headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
-    });
-    const body = await r.text();
-    res.json({ url: testUrl, status: r.status, statusText: r.statusText, body, authHeader: getAuthHeader().slice(0, 20) + '...' });
-  } catch (e) {
-    res.json({ url: testUrl, error: e.message });
-  }
 });
 
 module.exports = app;
