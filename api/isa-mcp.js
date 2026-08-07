@@ -148,6 +148,47 @@ function getRef(item, type) {
   return item.reference;
 }
 
+// Content-based identity key — independent of `reference`.
+// CSV-seeded rows carry synthetic `csv-...` refs while the API returns real
+// UUIDs for the SAME payment, so ref-only dedupe lets duplicates through.
+function isCsvRef(item, type) {
+  const r = getRef(item, type);
+  return typeof r === 'string' && r.startsWith('csv-');
+}
+
+function normTicker(t) {
+  // "UBXX", "UBXXl_EQ", "AAPL_US_EQ" -> "UBXX", "AAPL"
+  return String(t || '').replace(/(l\d*)?_(US_)?EQ$/i, '').replace(/l\d*$/, '').toUpperCase();
+}
+
+function contentKey(item, type) {
+  const n = (v) => Math.round((Number(v) || 0) * 100);
+  const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : '');
+  if (type === 'orders') {
+    const o = item.order || {};
+    return [normTicker(o.instrument?.ticker), day(o.createdAt || item.fill?.filledAt),
+      o.side, n(o.filledQuantity), n(o.filledValue)].join('|');
+  }
+  if (type === 'transactions') {
+    return [day(item.dateTime), item.type, n(item.amount)].join('|');
+  }
+  return [normTicker(item.ticker || item.instrument?.ticker), day(item.paidOn),
+    n(item.amount), n(item.quantity)].join('|');
+}
+
+// Removes duplicate records, preferring API rows over CSV-seeded rows.
+function dedupe(items, type) {
+  const best = new Map();
+  for (const item of items) {
+    const k = contentKey(item, type);
+    const existing = best.get(k);
+    if (!existing) { best.set(k, item); continue; }
+    // Prefer the API row (real reference) over the synthetic csv- row.
+    if (isCsvRef(existing, type) && !isCsvRef(item, type)) best.set(k, item);
+  }
+  return Array.from(best.values());
+}
+
 async function getCachedHistory(type, apiPath) {
   const cached = await dbGet(type);
 
@@ -173,16 +214,22 @@ async function getCachedHistory(type, apiPath) {
   const lastSynced = cached.last_synced ? new Date(cached.last_synced).getTime() : 0;
   const ttl = cached.fully_synced ? SYNCED_TTL_MS : INMEM_TTL_MS;
   if (Date.now() - lastSynced < ttl) {
-    const existingData = cached.data || [];
+    const rawData = cached.data || [];
+    const existingData = dedupe(rawData, type);
+    if (existingData.length !== rawData.length) {
+      // Self-heal: purge duplicate rows already sitting in Postgres.
+      await dbSave(type, existingData, cached.newest_ref, cached.continuation_path, cached.fully_synced);
+    }
     return {
       items: existingData, synced: cached.fully_synced, count: existingData.length,
-      newRecords: 0, backfilled: 0,
+      newRecords: 0, backfilled: 0, deduped: rawData.length - existingData.length,
     };
   }
 
   // === INCREMENTAL: Fetch new records from the top ===
-  const existingData = cached.data || [];
+  const existingData = dedupe(cached.data || [], type);
   const knownRefs = new Set(existingData.map(item => getRef(item, type)).filter(Boolean));
+  const knownKeys = new Set(existingData.map(item => contentKey(item, type)));
   let newItems = [];
   let nextPath = `${apiPath}?limit=50`;
   let foundOverlap = false;
@@ -192,7 +239,7 @@ async function getCachedHistory(type, apiPath) {
     if (incPages > 0) await new Promise(r => setTimeout(r, PAGE_DELAY_MS));
     const page = await t212FetchPage(nextPath);
     for (const item of page.items) {
-      if (knownRefs.has(getRef(item, type))) {
+      if (knownRefs.has(getRef(item, type)) || knownKeys.has(contentKey(item, type))) {
         foundOverlap = true;
         break;
       }
@@ -217,17 +264,19 @@ async function getCachedHistory(type, apiPath) {
   }
 
   // Merge: new (prepend) + existing + backfill (append)
-  const merged = [...newItems, ...existingData, ...backfillItems];
+  const rawMerged = [...newItems, ...existingData, ...backfillItems];
+  const merged = dedupe(rawMerged, type);
+  const removed = rawMerged.length - merged.length;
   const newestRef = merged.length > 0 ? getRef(merged[0], type) : cached.newest_ref;
   const fullySynced = !continuationPath;
 
-  if (newItems.length > 0 || backfillItems.length > 0) {
+  if (newItems.length > 0 || backfillItems.length > 0 || removed > 0) {
     await dbSave(type, merged, newestRef, continuationPath, fullySynced);
   }
 
   return {
     items: merged, synced: fullySynced, count: merged.length,
-    newRecords: newItems.length, backfilled: backfillItems.length,
+    newRecords: newItems.length, backfilled: backfillItems.length, deduped: removed,
   };
 }
 
@@ -415,9 +464,11 @@ async function handleTool(name, args) {
         const ym = `${y}-${String(m).padStart(2, '0')}`;
         const amt = d.amount || 0;
         if (args?.year && y !== args.year) continue;
-        byTicker[d.ticker] = byTicker[d.ticker] || { total: 0, payments: 0 };
-        byTicker[d.ticker].total += amt;
-        byTicker[d.ticker].payments++;
+        const tk = normTicker(d.ticker || d.instrument?.ticker) || '(unknown)';
+        byTicker[tk] = byTicker[tk] || { total: 0, payments: 0, name: d.instrument?.name || '' };
+        byTicker[tk].total += amt;
+        byTicker[tk].payments++;
+        if (!byTicker[tk].name && d.instrument?.name) byTicker[tk].name = d.instrument.name;
         byMonth[ym] = (byMonth[ym] || 0) + amt;
         byYear[y] = (byYear[y] || 0) + amt;
       }
@@ -425,7 +476,26 @@ async function handleTool(name, args) {
       const mKeys = Object.keys(byMonth).sort();
       const avgMo = mKeys.length ? total / mKeys.length : 0;
       const pv = summary?.totalValue || 0;
-      const yld = pv > 0 ? ((avgMo * 12) / pv) * 100 : 0;
+
+      // Yield must be measured against the CURRENT portfolio, not all-time
+      // average income (which is dragged down by the early years when the
+      // portfolio was a fraction of its present size).
+      const monthsBack = (n) => {
+        const d = new Date(); d.setMonth(d.getMonth() - n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      };
+      // Exclude the current (part-complete) month from run-rate windows.
+      const cutoff = monthsBack(0);
+      const windowSum = (n) => {
+        const from = monthsBack(n);
+        return mKeys.filter(k => k >= from && k < cutoff)
+                    .reduce((a, k) => a + byMonth[k], 0);
+      };
+      const ttm = windowSum(12);
+      const last6 = windowSum(6);
+      const last3 = windowSum(3);
+      const yieldOn = (annualised) => pv > 0 ? r2((annualised / pv) * 100) : 0;
+      const yld = yieldOn(last6 * 2);
       const sorted = Object.entries(byTicker)
         .sort((a, b) => b[1].total - a[1].total)
         .map(([t, d]) => ({ ticker: t, ...d, total: r2(d.total) }));
@@ -441,8 +511,17 @@ async function handleTool(name, args) {
           newRecords: divResult.newRecords, backfilled: divResult.backfilled },
         summary: {
           totalDividendIncome: r2(total), averageMonthlyIncome: r2(avgMo),
-          projectedAnnualIncome: r2(avgMo * 12), currentPortfolioValue: r2(pv),
+          allTimeAvgMonthlyIncome: r2(avgMo),
+          trailing12mIncome: r2(ttm),
+          projectedAnnualIncome: r2(last6 * 2),
+          currentPortfolioValue: r2(pv),
           estimatedYieldPct: r2(yld),
+          yieldBasis: 'last 6 complete months annualised / current portfolio value',
+          yieldVariants: {
+            trailing12mOnCurrentValue: yieldOn(ttm),
+            last6mAnnualised: yieldOn(last6 * 2),
+            last3mAnnualised: yieldOn(last3 * 4),
+          },
           dividendFrequencyPct: mKeys.length ? r2((withDivs / mKeys.length) * 100) : 0,
           totalPayments: divs.length, uniquePayers: Object.keys(byTicker).length,
           filterYear: args?.year || 'all-time',
@@ -740,9 +819,13 @@ async function handleTool(name, args) {
       for (const type of ['dividends', 'orders', 'transactions']) {
         const items = parsed[type] || [];
         if (items.length > 0) {
-          const newestRef = getRef(items[0], type);
-          await dbSave(type, items, newestRef, null, true);
-          results[type] = { count: items.length, fullySynced: true };
+          const prior = await dbGet(type);
+          // API rows first so dedupe() keeps them in preference to csv- rows.
+          const combined = dedupe([...(prior?.data || []), ...items], type);
+          const newestRef = getRef(combined[0], type);
+          await dbSave(type, combined, newestRef, null, true);
+          results[type] = { count: combined.length, fromCsv: items.length,
+            deduped: (prior?.data || []).length + items.length - combined.length, fullySynced: true };
         } else {
           results[type] = { count: 0, note: 'No records in CSV for this type' };
         }
